@@ -10,16 +10,27 @@ const NAV_ITEMS = [
   { href: '/portfolio', label: '我的投資組合' },
 ];
 
-export function NavLinks() {
+interface NavLinksProps {
+  mobile?: boolean;
+}
+
+export function NavLinks({ mobile = false }: NavLinksProps) {
   const searchParams = useSearchParams();
   const user = searchParams.get('user');
 
+  const navClassName = mobile
+    ? 'flex items-center gap-1.5 overflow-x-auto px-1 py-1.5 text-sm font-medium text-slate-700 sm:hidden'
+    : 'hidden items-center gap-6 text-sm font-medium text-gray-600 sm:flex';
+  const linkClassName = mobile
+    ? 'shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition hover:border-slate-300 hover:text-slate-900'
+    : 'transition hover:text-gray-900';
+
   return (
-    <nav className="hidden items-center gap-6 text-sm font-medium text-gray-600 sm:flex">
+    <nav className={navClassName}>
       {NAV_ITEMS.map((item) => {
         const href = user ? `${item.href}?user=${encodeURIComponent(user)}` : item.href;
         return (
-          <Link key={item.href} href={href} className="transition hover:text-gray-900">
+          <Link key={item.href} href={href} className={linkClassName}>
             {item.label}
           </Link>
         );

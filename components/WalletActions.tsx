@@ -57,12 +57,12 @@ export function WalletActions({ userId, onSuccess }: WalletActionsProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="glass-card lift-hover rounded-2xl border border-slate-200 p-5 shadow-sm">
       <h2 className="text-base font-semibold text-slate-900">資金操作</h2>
-      <p className="mt-1 text-xs text-slate-500">支援 demo 用戶即時入金/出金</p>
+      <p className="mt-1 text-xs text-slate-600">支援 demo 用戶即時入金/出金，適合展示 partner 結算流程。</p>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+        <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3">
           <label className="text-xs font-medium text-emerald-700">入金金額</label>
           <input
             type="number"
@@ -75,13 +75,13 @@ export function WalletActions({ userId, onSuccess }: WalletActionsProps) {
           <button
             onClick={() => void submitAction('deposit', depositAmount)}
             disabled={loadingAction !== null}
-            className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingAction === 'deposit' ? '處理中...' : '確認入金'}
           </button>
         </div>
 
-        <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
+        <div className="rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100/50 p-3">
           <label className="text-xs font-medium text-rose-700">出金金額</label>
           <input
             type="number"
@@ -94,7 +94,7 @@ export function WalletActions({ userId, onSuccess }: WalletActionsProps) {
           <button
             onClick={() => void submitAction('withdraw', withdrawAmount)}
             disabled={loadingAction !== null}
-            className="mt-2 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingAction === 'withdraw' ? '處理中...' : '確認出金'}
           </button>

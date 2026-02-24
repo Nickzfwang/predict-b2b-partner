@@ -100,42 +100,50 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     embedData?.embedBaseUrl ?? process.env.NEXT_PUBLIC_PM_EMBED_BASE_URL ?? 'http://localhost:8000/embed';
 
   return (
-    <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-      <section className="p-6 mb-8 overflow-hidden text-white border shadow-lg rounded-2xl border-slate-200 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 sm:p-8">
+    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 text-white shadow-lg sm:mb-8 sm:p-8">
         <p className="inline-flex px-3 py-1 mb-3 text-xs font-medium tracking-wide rounded-full bg-emerald-300/20 text-emerald-100">
           Global Macro Desk
         </p>
-        <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
+        <h1 className="text-xl font-bold leading-tight sm:text-3xl">
           財經快訊與市場觀點
-          <br />
+          <br className="hidden sm:block" />
           聚焦資產輪動、估值修正與政策風向
         </h1>
-        <p className="max-w-3xl mt-3 text-sm text-slate-200 sm:text-base">
+        <p className="max-w-3xl mt-3 text-xs text-slate-200 sm:text-base">
           你好，{displayName}。這裡整理當前跨市場關鍵訊號，包含股債匯商品與加密資產，
           搭配深度報導與即時預測市場，協助快速判讀風險與機會。
         </p>
 
-        <div className="grid grid-cols-2 gap-3 mt-5 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 sm:grid-cols-4">
           <MetricCard label="追蹤資產" value={MARKET_SNAPSHOT.length.toString()} />
           <MetricCard label="專題文章" value={articleCount.toString()} />
           <MetricCard label="熱門產業" value={SECTOR_HEAT.length.toString()} />
           <MetricCard label="本週高影響事件" value="4" />
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-6 sm:grid-cols-4">
+        <div className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:hidden">
           {MARKET_SNAPSHOT.map((item) => (
-            <div key={item.symbol} className="px-3 py-2 border rounded-lg border-white/15 bg-white/10">
+            <div key={item.symbol} className="min-w-[140px] snap-start rounded-lg border border-white/15 bg-white/10 px-3 py-2">
               <p className="text-[11px] text-slate-300">{item.symbol}</p>
               <p className="text-sm font-semibold text-white">{item.value}</p>
-              <p className={`text-xs ${item.positive ? 'text-emerald-300' : 'text-rose-300'}`}>
-                {item.change}
-              </p>
+              <p className={`text-xs ${item.positive ? 'text-emerald-300' : 'text-rose-300'}`}>{item.change}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 hidden grid-cols-2 gap-2 sm:grid sm:grid-cols-4">
+          {MARKET_SNAPSHOT.map((item) => (
+            <div key={item.symbol} className="rounded-lg border border-white/15 bg-white/10 px-3 py-2">
+              <p className="text-[11px] text-slate-300">{item.symbol}</p>
+              <p className="text-sm font-semibold text-white">{item.value}</p>
+              <p className={`text-xs ${item.positive ? 'text-emerald-300' : 'text-rose-300'}`}>{item.change}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="p-5 mb-8 bg-white border shadow-md rounded-2xl border-emerald-200 sm:p-6">
+      <section className="mb-8 rounded-2xl border border-emerald-200 bg-white p-4 shadow-md sm:p-6">
         <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
@@ -154,17 +162,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         {embedData ? (
-          <Suspense fallback={<div className="h-[680px] animate-pulse rounded-xl bg-gray-100" />}>
+          <Suspense fallback={<div className="h-[520px] animate-pulse rounded-xl bg-gray-100 sm:h-[680px]" />}>
             <EmbedWidget
               embedBaseUrl={embedBaseUrl}
               initialToken={embedData.token}
               userId={user}
               mode="markets"
-              height={680}
+              height={560}
             />
           </Suspense>
         ) : (
-          <div className="flex h-[680px] flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white text-center">
+          <div className="flex h-[520px] flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white text-center sm:h-[680px]">
             <span className="text-3xl">🔌</span>
             <p className="text-sm text-gray-500">
               無法連線至 PredictMarkets
@@ -175,7 +183,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         )}
       </section>
 
-      <section className="grid grid-cols-1 gap-8 mb-8 lg:grid-cols-3">
+      <section className="mb-8 grid grid-cols-1 gap-5 sm:gap-8 lg:grid-cols-3">
         <div className="p-5 bg-white border shadow-sm lg:col-span-2 rounded-2xl border-slate-200 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold text-slate-900 sm:text-lg">今日焦點快訊</h2>
@@ -243,12 +251,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </aside>
       </section>
 
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">深度閱讀</h2>
+          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">深度閱讀</h2>
           <p className="mt-0.5 text-sm text-slate-500">從財經報導建立觀點，持續追蹤市場關鍵變化。</p>
         </div>
-        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">Editor Picks</span>
+        <span className="hidden rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 sm:inline-flex">Editor Picks</span>
       </div>
 
       <section>
@@ -270,9 +278,9 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, mono = false }: MetricCardProps) {
   return (
-    <div className="px-3 py-2 border rounded-xl border-white/15 bg-white/10">
+    <div className="rounded-xl border border-white/15 bg-white/10 px-2.5 py-2 sm:px-3">
       <p className="text-xs text-slate-300">{label}</p>
-      <p className={`mt-1 text-lg font-semibold text-white ${mono ? 'font-mono text-sm' : ''}`}>{value}</p>
+      <p className={`mt-1 text-base font-semibold text-white sm:text-lg ${mono ? 'font-mono text-xs sm:text-sm' : ''}`}>{value}</p>
     </div>
   );
 }

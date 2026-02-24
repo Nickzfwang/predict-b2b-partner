@@ -69,17 +69,17 @@ export function TradeForm({ userId, markets, onSuccess }: TradeFormProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="glass-card lift-hover rounded-2xl border border-slate-200 p-5 shadow-sm">
       <h2 className="text-base font-semibold text-slate-900">快速下單</h2>
-      <p className="mt-1 text-xs text-slate-500">透過 `/api/trades` 代表用戶下單</p>
+      <p className="mt-1 text-xs text-slate-600">透過 `/api/trades` 代表用戶下單，展示交易執行路徑。</p>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm font-medium text-slate-700">
           市場
           <select
             value={marketId}
             onChange={(e) => setMarketId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner"
             disabled={markets.length === 0}
           >
             {markets.length === 0 ? (
@@ -92,7 +92,7 @@ export function TradeForm({ userId, markets, onSuccess }: TradeFormProps) {
           </select>
         </label>
 
-        <label className="text-sm text-slate-600">
+        <label className="text-sm font-medium text-slate-700">
           股數
           <input
             type="number"
@@ -100,28 +100,28 @@ export function TradeForm({ userId, markets, onSuccess }: TradeFormProps) {
             step="1"
             value={shares}
             onChange={(e) => setShares(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner"
           />
         </label>
 
-        <label className="text-sm text-slate-600">
+        <label className="text-sm font-medium text-slate-700">
           方向
           <select
             value={type}
             onChange={(e) => setType(e.target.value as 'buy' | 'sell')}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner"
           >
             <option value="buy">買入</option>
             <option value="sell">賣出</option>
           </select>
         </label>
 
-        <label className="text-sm text-slate-600">
+        <label className="text-sm font-medium text-slate-700">
           結果
           <select
             value={outcome}
             onChange={(e) => setOutcome(e.target.value as 'yes' | 'no')}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner"
           >
             <option value="yes">Yes</option>
             <option value="no">No</option>
@@ -132,7 +132,7 @@ export function TradeForm({ userId, markets, onSuccess }: TradeFormProps) {
       <button
         onClick={() => void submitTrade()}
         disabled={disabled}
-        className="mt-4 w-full rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-4 w-full rounded-lg bg-gradient-to-r from-blue-700 to-indigo-700 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:from-blue-800 hover:to-indigo-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? '送出中...' : '送出交易'}
       </button>

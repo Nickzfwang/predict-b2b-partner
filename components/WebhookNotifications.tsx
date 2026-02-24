@@ -188,9 +188,13 @@ export function WebhookNotifications() {
         className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
         aria-label="Webhook 通知"
       >
-        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path d="M10 2a4 4 0 0 0-4 4v2.586l-.707.707A1 1 0 0 0 6 11h8a1 1 0 0 0 .707-1.707L14 8.586V6a4 4 0 0 0-4-4Z" />
-          <path d="M8.515 12a2 2 0 0 0 2.97 0h-2.97Z" />
+        <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M7 10a5 5 0 1 1 10 0v3.2c0 .6.24 1.18.67 1.6l.9.9a.7.7 0 0 1-.5 1.2H5.93a.7.7 0 0 1-.5-1.2l.9-.9A2.25 2.25 0 0 0 7 13.2V10Z"
+          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19a2 2 0 0 0 4 0" />
         </svg>
         {ready && unread > 0 && (
           <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
@@ -199,7 +203,7 @@ export function WebhookNotifications() {
         )}
       </button>
 
-      <div className="pointer-events-none fixed right-4 top-16 z-40 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2">
+      <div className="pointer-events-none fixed right-2 top-20 z-40 flex w-[min(22rem,calc(100vw-1rem))] flex-col gap-2 sm:right-4 sm:top-16 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]">
         {toasts.map((toast) => (
           <div
             key={toast.key}
@@ -219,7 +223,7 @@ export function WebhookNotifications() {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-2 w-96 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl">
+          <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl sm:w-96">
             <div className="border-b border-gray-100 px-4 py-3">
               <p className="text-sm font-semibold text-gray-900">Webhook 通知</p>
               <p className="text-xs text-gray-500">顯示目前使用者相關事件（{user}）</p>

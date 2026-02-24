@@ -99,56 +99,83 @@ export default async function TradesPage({ searchParams }: TradesPageProps) {
   const data = await getTradesData(user);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">交易中心</h1>
-        <p className="mt-1 text-sm text-slate-500">快速下單與交易紀錄查詢</p>
-      </div>
+    <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <section className="demo-hero mb-6 overflow-hidden rounded-2xl border border-slate-800/60 p-6 text-white shadow-lg">
+        <p className="inline-flex rounded-full bg-sky-300/25 px-3 py-1 text-xs font-medium text-sky-100">Trading Terminal</p>
+        <h1 className="mt-3 text-2xl font-bold">交易中心</h1>
+        <p className="mt-1 text-sm text-slate-200">快速下單與交易紀錄查詢，展示 partner 端交易 API 介接流程。</p>
+      </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section className="lg:col-span-1">
+        <section className="lg:col-span-1 lift-hover">
           <TradeForm
             userId={user}
             markets={data?.marketOptions ?? []}
           />
         </section>
 
-        <section className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="table-surface lg:col-span-2 p-4 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold text-slate-800">我的交易紀錄</h2>
 
           {data?.trades?.length ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
-                    <th className="py-2 pr-3">時間</th>
-                    <th className="py-2 pr-3">市場</th>
-                    <th className="py-2 pr-3">類型</th>
-                    <th className="py-2 pr-3">股數</th>
-                    <th className="py-2 pr-3">單價</th>
-                    <th className="py-2 pr-3">總額</th>
-                    <th className="py-2 pr-3">餘額</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.trades.map((trade, idx) => (
-                    <tr key={typeof trade.trade_id === 'string' ? trade.trade_id : `trade-${idx}`} className="border-b border-slate-50 text-slate-700 last:border-b-0">
-                      <td className="py-2 pr-3">
-                        {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString('zh-TW') : 'N/A'}
-                      </td>
-                      <td className="py-2 pr-3 font-mono text-xs">{getMarketLabel(trade.market_id)}</td>
-                      <td className="py-2 pr-3 uppercase">
-                        {typeof trade.type === 'string' ? trade.type : 'N/A'} / {typeof trade.outcome === 'string' ? trade.outcome : 'N/A'}
-                      </td>
-                      <td className="py-2 pr-3">{typeof trade.shares === 'number' ? trade.shares : 0}</td>
-                      <td className="py-2 pr-3">${typeof trade.price_per_share === 'number' ? trade.price_per_share.toFixed(2) : '0.00'}</td>
-                      <td className="py-2 pr-3">${typeof trade.total_amount === 'number' ? trade.total_amount.toFixed(2) : '0.00'}</td>
-                      <td className="py-2 pr-3">${typeof trade.user_balance_after === 'number' ? trade.user_balance_after.toFixed(2) : '0.00'}</td>
+            <>
+              <div className="space-y-2 sm:hidden">
+                {data.trades.map((trade, idx) => (
+                  <article key={typeof trade.trade_id === 'string' ? trade.trade_id : `trade-mobile-${idx}`} className="mobile-data-card">
+                    <p className="text-xs text-slate-500">
+                      {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString('zh-TW') : 'N/A'}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-slate-700">{getMarketLabel(trade.market_id)}</p>
+                    <p className="mt-1 text-sm font-medium uppercase text-slate-800">
+                      {typeof trade.type === 'string' ? trade.type : 'N/A'} / {typeof trade.outcome === 'string' ? trade.outcome : 'N/A'}
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                      <p>股數：{typeof trade.shares === 'number' ? trade.shares : 0}</p>
+                      <p>單價：${typeof trade.price_per_share === 'number' ? trade.price_per_share.toFixed(2) : '0.00'}</p>
+                      <p className="font-semibold text-slate-900">
+                        總額：${typeof trade.total_amount === 'number' ? trade.total_amount.toFixed(2) : '0.00'}
+                      </p>
+                      <p className="text-right font-semibold text-slate-900">
+                        餘額：${typeof trade.user_balance_after === 'number' ? trade.user_balance_after.toFixed(2) : '0.00'}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="table-head-row text-left text-xs">
+                      <th className="py-2 pr-3">時間</th>
+                      <th className="py-2 pr-3">市場</th>
+                      <th className="py-2 pr-3">類型</th>
+                      <th className="py-2 pr-3">股數</th>
+                      <th className="py-2 pr-3">單價</th>
+                      <th className="py-2 pr-3">總額</th>
+                      <th className="py-2 pr-3">餘額</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {data.trades.map((trade, idx) => (
+                      <tr key={typeof trade.trade_id === 'string' ? trade.trade_id : `trade-${idx}`} className="table-body-row">
+                        <td className="py-2 pr-3">
+                          {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString('zh-TW') : 'N/A'}
+                        </td>
+                        <td className="py-2 pr-3 font-mono text-xs">{getMarketLabel(trade.market_id)}</td>
+                        <td className="py-2 pr-3 uppercase">
+                          {typeof trade.type === 'string' ? trade.type : 'N/A'} / {typeof trade.outcome === 'string' ? trade.outcome : 'N/A'}
+                        </td>
+                        <td className="py-2 pr-3">{typeof trade.shares === 'number' ? trade.shares : 0}</td>
+                        <td className="py-2 pr-3">${typeof trade.price_per_share === 'number' ? trade.price_per_share.toFixed(2) : '0.00'}</td>
+                        <td className="py-2 pr-3 font-medium text-slate-900">${typeof trade.total_amount === 'number' ? trade.total_amount.toFixed(2) : '0.00'}</td>
+                        <td className="py-2 pr-3 font-medium text-slate-900">${typeof trade.user_balance_after === 'number' ? trade.user_balance_after.toFixed(2) : '0.00'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <p className="text-sm text-slate-500">目前沒有交易紀錄。</p>
           )}

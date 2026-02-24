@@ -30,10 +30,10 @@ export function UserSwitcher() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+        className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 sm:gap-2 sm:px-3"
       >
         <span>{USER_AVATARS[currentUser] ?? '👤'}</span>
-        <span className="capitalize">{currentUser}</span>
+        <span className="hidden capitalize sm:inline">{currentUser}</span>
         <svg
           className={`h-3.5 w-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
           viewBox="0 0 20 20"
@@ -53,7 +53,7 @@ export function UserSwitcher() {
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
 
           {/* 下拉選單 */}
-          <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg">
+          <div className="absolute right-0 z-20 mt-2 w-40 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg sm:w-44">
             <div className="border-b border-gray-100 px-3 py-2">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 Demo 用戶切換
