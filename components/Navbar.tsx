@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { UserSwitcher } from './UserSwitcher';
+import { NavLinks } from './NavLinks';
+import { WebhookNotifications } from './WebhookNotifications';
 
 function UserSwitcherFallback() {
   return (
@@ -25,19 +27,20 @@ export function Navbar() {
         </Link>
 
         {/* Nav Links */}
-        <nav className="hidden items-center gap-6 text-sm font-medium text-gray-600 sm:flex">
-          <Link href="/" className="transition hover:text-gray-900">
-            首頁
-          </Link>
-          <Link href="/portfolio" className="transition hover:text-gray-900">
-            我的投資組合
-          </Link>
-        </nav>
-
-        {/* User Switcher（client，需包 Suspense） */}
-        <Suspense fallback={<UserSwitcherFallback />}>
-          <UserSwitcher />
+        <Suspense fallback={<div className="hidden sm:block" />}>
+          <NavLinks />
         </Suspense>
+
+        <div className="flex items-center gap-2">
+          <Suspense fallback={<div className="h-10 w-10 rounded-full border border-slate-300 bg-white" />}>
+            <WebhookNotifications />
+          </Suspense>
+
+          {/* User Switcher（client，需包 Suspense） */}
+          <Suspense fallback={<UserSwitcherFallback />}>
+            <UserSwitcher />
+          </Suspense>
+        </div>
       </div>
     </header>
   );

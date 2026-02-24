@@ -41,10 +41,88 @@ export interface PMUser {
   created_at: string;
 }
 
+export interface PMBalanceTransaction {
+  external_user_id: string;
+  amount: number;
+  balance_after: number;
+  reference_id?: string;
+}
+
 export interface PMEmbedToken {
   embed_token: string;
   expires_at: string;
   embed_base_url: string;
+}
+
+export interface PMTrade {
+  trade_id: string;
+  external_user_id: string;
+  market_id: string;
+  type: 'buy' | 'sell';
+  outcome: 'yes' | 'no';
+  shares: number;
+  price_per_share: number;
+  total_amount: number;
+  user_balance_after: number;
+  created_at: string;
+  position?: {
+    yes_shares: number;
+    no_shares: number;
+    total_invested: number;
+    current_value: number;
+    unrealized_profit: number;
+  };
+}
+
+export interface PMPosition {
+  position_id: string;
+  external_user_id: string;
+  market_id: string;
+  market_title: string;
+  market_status: 'open' | 'closed' | 'judging' | 'resolved';
+  yes_shares: number;
+  no_shares: number;
+  total_invested: number;
+  current_value: number;
+  unrealized_profit: number;
+  realized_profit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PMPriceHistoryPoint {
+  ts: string;
+  yes_price: number;
+  no_price: number;
+  volume?: number;
+}
+
+export interface PMWebhook {
+  id: string;
+  url: string;
+  events: string[];
+  status: 'active' | 'disabled';
+  created_at: string;
+  updated_at?: string;
+  secret?: string;
+}
+
+export interface PMAnalyticsOverview {
+  total_users: number;
+  total_trades: number;
+  total_volume: number;
+  today: { trades: number; volume: number };
+  last_30_days: { trades: number; volume: number };
+  tier: string;
+  rate_limit_per_minute: number;
+  revenue_share_rate: number;
+}
+
+export interface PMAnalyticsDaily {
+  date: string;
+  trades: number;
+  volume: number;
+  new_users: number;
 }
 
 export interface PMApiResponse<T> {
@@ -73,6 +151,21 @@ export interface PMApiError {
     request_id: string;
     timestamp: string;
   };
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isPMApiResponse<T>(value: unknown): value is PMApiResponse<T> {
+  if (!isObjectRecord(value)) return false;
+  return (
+    value.success === true &&
+    'data' in value &&
+    isObjectRecord(value.meta) &&
+    typeof value.meta.request_id === 'string' &&
+    typeof value.meta.timestamp === 'string'
+  );
 }
 
 // ─── HMAC 簽名工具 ───────────────────────────────────────────────────────────
@@ -105,34 +198,83 @@ async function pmFetch<T>(
 
   const path = `/api/v1/b2b${endpoint}`;
   const bodyString = body ? JSON.stringify(body) : '';
-  const { timestamp, signature } = buildSignature(method, path, bodyString);
 
   const url = new URL(`${baseUrl}${path}`);
   if (queryParams) {
     Object.entries(queryParams).forEach(([k, v]) => url.searchParams.set(k, v));
   }
 
-  const response = await fetch(url.toString(), {
-    method,
-    headers: {
-      'X-API-Key': apiKey,
-      'X-Timestamp': timestamp,
-      'X-Signature': signature,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    ...(bodyString ? { body: bodyString } : {}),
-    cache: 'no-store',
-  });
+  // PM 的 replay protection 會拒絕同秒重複簽名。
+  // 這裡在碰到 "Signature already used" 時延遲 1.1 秒後重試一次。
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { timestamp, signature } = buildSignature(method, path, bodyString);
 
-  const json = (await response.json()) as PMApiResponse<T> | PMApiError;
+    const response = await fetch(url.toString(), {
+      method,
+      headers: {
+        'X-API-Key': apiKey,
+        'X-Timestamp': timestamp,
+        'X-Signature': signature,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      ...(bodyString ? { body: bodyString } : {}),
+      cache: 'no-store',
+    });
 
-  if (!json.success) {
-    const err = json as PMApiError;
-    throw new Error(`[PM API] ${err.error.code}: ${err.error.message}`);
+    const rawText = await response.text();
+    let parsed: unknown = {};
+
+    if (rawText) {
+      try {
+        parsed = JSON.parse(rawText) as unknown;
+      } catch {
+        parsed = { message: rawText };
+      }
+    }
+
+    if (isPMApiResponse<T>(parsed)) {
+      return parsed;
+    }
+
+    if (response.ok && isObjectRecord(parsed) && !('success' in parsed)) {
+      return {
+        success: true,
+        data: ('data' in parsed ? parsed.data : parsed) as T,
+        meta: {
+          request_id: '',
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }
+
+    let code = `HTTP_${response.status}`;
+    let message = response.statusText || 'Request failed';
+
+    if (isObjectRecord(parsed)) {
+      if (isObjectRecord(parsed.error)) {
+        const apiCode = parsed.error.code;
+        const apiMessage = parsed.error.message;
+        if (typeof apiCode === 'string' && apiCode) code = apiCode;
+        if (typeof apiMessage === 'string' && apiMessage) message = apiMessage;
+      } else if (typeof parsed.message === 'string' && parsed.message) {
+        message = parsed.message;
+      }
+    }
+
+    const isSignatureReplay =
+      code === 'UNAUTHORIZED' &&
+      message.toLowerCase().includes('signature already used');
+
+    if (isSignatureReplay && attempt < 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      continue;
+    }
+
+    throw new Error(`[PM API] ${code}: ${message}`);
   }
 
-  return json as PMApiResponse<T>;
+  throw new Error('[PM API] Unknown error');
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -163,6 +305,24 @@ export const pmClient = {
     return pmFetch<PMUser>('GET', `/users/${externalUserId}`);
   },
 
+  /** 入金 */
+  deposit(externalUserId: string, payload: {
+    amount: number;
+    reference_id?: string;
+    note?: string;
+  }) {
+    return pmFetch<PMBalanceTransaction>('POST', `/users/${externalUserId}/deposit`, payload);
+  },
+
+  /** 出金 */
+  withdraw(externalUserId: string, payload: {
+    amount: number;
+    reference_id?: string;
+    note?: string;
+  }) {
+    return pmFetch<PMBalanceTransaction>('POST', `/users/${externalUserId}/withdraw`, payload);
+  },
+
   /** 產生 embed token（供 iframe SDK 使用） */
   getEmbedToken(payload: {
     external_user_id?: string;
@@ -170,6 +330,67 @@ export const pmClient = {
     ttl?: number;
   }) {
     return pmFetch<PMEmbedToken>('POST', '/auth/embed-token', payload);
+  },
+
+  /** 下單 */
+  placeTrade(payload: {
+    external_user_id: string;
+    market_id: string;
+    type: 'buy' | 'sell';
+    outcome: 'yes' | 'no';
+    shares: number;
+  }) {
+    return pmFetch<PMTrade>('POST', '/trades', payload);
+  },
+
+  /** 交易列表 */
+  getTrades(params?: Record<string, string>) {
+    return pmFetch<PMTrade[]>('GET', '/trades', undefined, params);
+  },
+
+  /** 持倉列表 */
+  getPositions(params?: Record<string, string>) {
+    return pmFetch<PMPosition[]>('GET', '/positions', undefined, params);
+  },
+
+  /** 單一市場交易列表 */
+  getMarketTrades(marketId: string, params?: Record<string, string>) {
+    return pmFetch<PMTrade[]>('GET', `/markets/${marketId}/trades`, undefined, params);
+  },
+
+  /** 單一市場價格歷史 */
+  getMarketPriceHistory(marketId: string, params?: Record<string, string>) {
+    return pmFetch<PMPriceHistoryPoint[]>('GET', `/markets/${marketId}/price-history`, undefined, params);
+  },
+
+  /** 建立 webhook */
+  createWebhook(payload: { url: string; events: string[] }) {
+    return pmFetch<PMWebhook>('POST', '/webhooks', payload);
+  },
+
+  /** 取得 webhook 列表 */
+  getWebhooks() {
+    return pmFetch<PMWebhook[]>('GET', '/webhooks');
+  },
+
+  /** 更新 webhook */
+  updateWebhook(webhookId: string, payload: { url?: string; events?: string[]; status?: 'active' | 'disabled' }) {
+    return pmFetch<PMWebhook>('PUT', `/webhooks/${webhookId}`, payload);
+  },
+
+  /** 刪除 webhook */
+  deleteWebhook(webhookId: string) {
+    return pmFetch<{ id: string }>('DELETE', `/webhooks/${webhookId}`);
+  },
+
+  /** 總覽分析 */
+  getAnalyticsOverview() {
+    return pmFetch<PMAnalyticsOverview>('GET', '/analytics/overview');
+  },
+
+  /** 每日分析 */
+  getAnalyticsDaily(params?: Record<string, string>) {
+    return pmFetch<PMAnalyticsDaily[]>('GET', '/analytics/daily', undefined, params);
   },
 };
 
@@ -185,6 +406,29 @@ export function verifyWebhookSignature(rawBody: string, signature: string, secre
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
   const expectedBuf = Buffer.from(expected, 'utf8');
   const signatureBuf = Buffer.from(signature, 'utf8');
+
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return timingSafeEqual(expectedBuf, signatureBuf);
+}
+
+/**
+ * 驗證新版 webhook delivery 簽名
+ * sign_string = "{webhook_id}.{timestamp}.{json_payload}"
+ */
+export function verifyWebhookDeliverySignature(params: {
+  webhookId: string;
+  timestamp: string;
+  rawBody: string;
+  signature: string;
+  secret: string;
+}): boolean {
+  const { webhookId, timestamp, rawBody, signature, secret } = params;
+  const normalizedSignature = signature.replace(/^sha256=/, '');
+  const signingString = `${webhookId}.${timestamp}.${rawBody}`;
+  const expected = createHmac('sha256', secret).update(signingString).digest('hex');
+
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  const signatureBuf = Buffer.from(normalizedSignature, 'utf8');
 
   if (expectedBuf.length !== signatureBuf.length) return false;
   return timingSafeEqual(expectedBuf, signatureBuf);
