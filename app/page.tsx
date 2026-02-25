@@ -65,6 +65,23 @@ const WEEKLY_CALENDAR = [
 ];
 
 const EMBED_HIGHLIGHTS = ['可嵌入媒體內容頁', '可嵌入社群導流頁', '可嵌入合作平台會員中心'];
+const EMBED_SCENARIOS = [
+  { title: '內容平台嵌入', detail: '在新聞與專題頁內直接展示即時預測市場，不中斷閱讀流程。' },
+  { title: '會員中心整合', detail: '將市場模組放入既有會員後台，延伸停留與互動深度。' },
+  { title: '活動頁導流', detail: '活動頁可直接掛上熱門市場清單，快速承接流量轉換。' },
+];
+const HERO_METRICS = [
+  { label: '追蹤資產', value: MARKET_SNAPSHOT.length.toString() },
+  { label: '專題文章', value: ARTICLES.length.toString() },
+  { label: '熱門產業', value: SECTOR_HEAT.length.toString() },
+  { label: '本週高影響事件', value: '4' },
+];
+const TREND_SERIES = [
+  { label: 'S&P 500 風險偏好', value: 'Risk-on', change: '+1.8%', positive: true, points: [42, 46, 45, 49, 52, 55, 58, 61] },
+  { label: '美元與殖利率', value: '緩步回落', change: '-0.7%', positive: false, points: [66, 64, 63, 60, 59, 57, 56, 55] },
+  { label: '加密資產動能', value: '波動上行', change: '+2.4%', positive: true, points: [38, 41, 39, 45, 44, 49, 53, 56] },
+  { label: '能源價格節奏', value: '區間震盪', change: '+0.5%', positive: true, points: [52, 50, 54, 53, 51, 55, 54, 56] },
+];
 
 async function getEmbedData(userId: string) {
   try {
@@ -92,8 +109,6 @@ async function getEmbedData(userId: string) {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const { user = 'alice' } = await searchParams;
   const displayName = user.charAt(0).toUpperCase() + user.slice(1);
-  const articleCount = ARTICLES.length;
-
   const embedData = await getEmbedData(user);
 
   const embedBaseUrl =
@@ -102,7 +117,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 text-white shadow-lg sm:mb-8 sm:p-8">
-        <p className="inline-flex px-3 py-1 mb-3 text-xs font-medium tracking-wide rounded-full bg-emerald-300/20 text-emerald-100">
+        <p className="mb-3 inline-flex rounded-full bg-emerald-300/20 px-3 py-1 text-xs font-medium tracking-wide text-emerald-100">
           Global Macro Desk
         </p>
         <h1 className="text-xl font-bold leading-tight sm:text-3xl">
@@ -110,21 +125,28 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <br className="hidden sm:block" />
           聚焦資產輪動、估值修正與政策風向
         </h1>
-        <p className="max-w-3xl mt-3 text-xs text-slate-200 sm:text-base">
+        <p className="mt-3 max-w-3xl text-xs text-slate-200 sm:text-base">
           你好，{displayName}。這裡整理當前跨市場關鍵訊號，包含股債匯商品與加密資產，
           搭配深度報導與即時預測市場，協助快速判讀風險與機會。
         </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 sm:grid-cols-4">
-          <MetricCard label="追蹤資產" value={MARKET_SNAPSHOT.length.toString()} />
-          <MetricCard label="專題文章" value={articleCount.toString()} />
-          <MetricCard label="熱門產業" value={SECTOR_HEAT.length.toString()} />
-          <MetricCard label="本週高影響事件" value="4" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] text-slate-100">宏觀政策</span>
+          <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] text-slate-100">資產輪動</span>
+          <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] text-slate-100">事件驅動</span>
         </div>
 
-        <div className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:hidden">
+        <div className="mt-4 grid grid-cols-2 gap-2 border-y border-white/15 py-3 sm:mt-5 sm:grid-cols-4 sm:gap-3">
+          {HERO_METRICS.map((item) => (
+            <div key={item.label}>
+              <MetricCard label={item.label} value={item.value} frameless />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 sm:hidden">
           {MARKET_SNAPSHOT.map((item) => (
-            <div key={item.symbol} className="min-w-[140px] snap-start rounded-lg border border-white/15 bg-white/10 px-3 py-2">
+            <div key={item.symbol} className="min-w-[120px] snap-start px-1 py-1">
               <p className="text-[11px] text-slate-300">{item.symbol}</p>
               <p className="text-sm font-semibold text-white">{item.value}</p>
               <p className={`text-xs ${item.positive ? 'text-emerald-300' : 'text-rose-300'}`}>{item.change}</p>
@@ -132,25 +154,39 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ))}
         </div>
 
-        <div className="mt-6 hidden grid-cols-2 gap-2 sm:grid sm:grid-cols-4">
+        <div className="mt-6 hidden grid-cols-4 gap-x-3 gap-y-2 border-b border-white/15 pb-3 sm:grid">
           {MARKET_SNAPSHOT.map((item) => (
-            <div key={item.symbol} className="rounded-lg border border-white/15 bg-white/10 px-3 py-2">
+            <div key={item.symbol} className="border-none bg-transparent px-1 py-1">
               <p className="text-[11px] text-slate-300">{item.symbol}</p>
               <p className="text-sm font-semibold text-white">{item.value}</p>
               <p className={`text-xs ${item.positive ? 'text-emerald-300' : 'text-rose-300'}`}>{item.change}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-100 sm:text-base">市場趨勢曲線</h2>
+            <span className="rounded-full bg-sky-300/20 px-2 py-0.5 text-[11px] font-medium text-sky-100">Trend View</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 border-t border-white/15 pt-3 md:grid-cols-2 xl:grid-cols-4">
+            {TREND_SERIES.map((series) => (
+              <div key={series.label}>
+                <TrendChartCard series={series} dark frameless />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="mb-8 rounded-2xl border border-emerald-200 bg-white p-4 shadow-md sm:p-6">
+      <section className="mb-8 rounded-2xl border border-emerald-300/60 bg-gradient-to-br from-white to-emerald-50/50 p-4 shadow-[0_20px_55px_-35px_rgba(16,185,129,0.65)] sm:p-6">
         <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
               Featured Embed
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">熱門預測市場</h2>
-            <p className="mt-1 text-sm text-slate-600">此區塊可直接嵌到其他內容平台，完整保留即時市場瀏覽與互動體驗。</p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">熱門預測市場</h2>
+            <p className="mt-1 text-sm text-slate-600">核心展示區塊: 此模組可原樣嵌入任意外部平台，完整保留市場清單、互動與導流能力。</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {EMBED_HIGHLIGHTS.map((item) => (
@@ -162,15 +198,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         {embedData ? (
-          <Suspense fallback={<div className="h-[520px] animate-pulse rounded-xl bg-gray-100 sm:h-[680px]" />}>
-            <EmbedWidget
-              embedBaseUrl={embedBaseUrl}
-              initialToken={embedData.token}
-              userId={user}
-              mode="markets"
-              height={560}
-            />
-          </Suspense>
+          <div className="rounded-2xl border border-emerald-200 bg-white p-2 shadow-inner sm:p-3">
+            <Suspense fallback={<div className="h-[520px] animate-pulse rounded-xl bg-gray-100 sm:h-[680px]" />}>
+              <EmbedWidget
+                embedBaseUrl={embedBaseUrl}
+                initialToken={embedData.token}
+                userId={user}
+                mode="markets"
+                height={620}
+              />
+            </Suspense>
+          </div>
         ) : (
           <div className="flex h-[520px] flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white text-center sm:h-[680px]">
             <span className="text-3xl">🔌</span>
@@ -181,6 +219,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </p>
           </div>
         )}
+      </section>
+
+      <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {EMBED_SCENARIOS.map((item) => (
+          <article key={item.title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+            <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
+          </article>
+        ))}
       </section>
 
       <section className="mb-8 grid grid-cols-1 gap-5 sm:gap-8 lg:grid-cols-3">
@@ -274,13 +321,67 @@ interface MetricCardProps {
   label: string;
   value: string;
   mono?: boolean;
+  frameless?: boolean;
 }
 
-function MetricCard({ label, value, mono = false }: MetricCardProps) {
+function MetricCard({ label, value, mono = false, frameless = false }: MetricCardProps) {
   return (
-    <div className="rounded-xl border border-white/15 bg-white/10 px-2.5 py-2 sm:px-3">
-      <p className="text-xs text-slate-300">{label}</p>
+    <div className={frameless ? 'px-1 py-1' : 'rounded-xl border border-white/15 bg-white/10 px-2.5 py-2 sm:px-3'}>
+      <p className={frameless ? 'text-[11px] tracking-wide text-slate-300' : 'text-xs text-slate-300'}>{label}</p>
       <p className={`mt-1 text-base font-semibold text-white sm:text-lg ${mono ? 'font-mono text-xs sm:text-sm' : ''}`}>{value}</p>
     </div>
+  );
+}
+
+interface TrendSeries {
+  label: string;
+  value: string;
+  change: string;
+  positive: boolean;
+  points: number[];
+}
+
+function getTrendPaths(points: number[]) {
+  const width = 220;
+  const height = 76;
+  const pad = 6;
+  if (points.length < 2) return { linePath: '', areaPath: '' };
+
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const stepX = (width - pad * 2) / (points.length - 1);
+
+  const coords = points.map((p, idx) => {
+    const x = pad + idx * stepX;
+    const y = height - pad - ((p - min) / range) * (height - pad * 2);
+    return { x, y };
+  });
+
+  const linePath = coords.map((c, idx) => `${idx === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
+  const areaPath =
+    `${linePath} L ${coords[coords.length - 1].x.toFixed(1)} ${(height - pad).toFixed(1)} ` +
+    `L ${coords[0].x.toFixed(1)} ${(height - pad).toFixed(1)} Z`;
+
+  return { linePath, areaPath };
+}
+
+function TrendChartCard({ series, dark = false, frameless = false }: { series: TrendSeries; dark?: boolean; frameless?: boolean }) {
+  const { linePath, areaPath } = getTrendPaths(series.points);
+
+  return (
+    <article className={frameless ? 'px-1 py-1' : dark ? 'rounded-xl border border-white/15 bg-white/10 p-3' : 'rounded-xl border border-slate-200 bg-slate-50/70 p-3'}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={dark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-800'}>{series.label}</p>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${series.positive ? (dark ? 'bg-emerald-300/20 text-emerald-200' : 'bg-emerald-100 text-emerald-700') : (dark ? 'bg-rose-300/20 text-rose-200' : 'bg-rose-100 text-rose-700')}`}>
+          {series.change}
+        </span>
+      </div>
+      <p className={dark ? 'mt-1 text-xs text-slate-300' : 'mt-1 text-xs text-slate-500'}>{series.value}</p>
+      <svg viewBox="0 0 220 76" className="mt-2 h-20 w-full">
+        <path d={areaPath} fill={series.positive ? (dark ? 'rgba(16,185,129,0.22)' : 'rgba(16,185,129,0.12)') : (dark ? 'rgba(244,63,94,0.22)' : 'rgba(244,63,94,0.12)')} />
+        <path d={linePath} fill="none" stroke={series.positive ? (dark ? '#34d399' : '#059669') : (dark ? '#fb7185' : '#e11d48')} strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    </article>
   );
 }
