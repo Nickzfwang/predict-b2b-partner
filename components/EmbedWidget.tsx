@@ -45,6 +45,7 @@ export function EmbedWidget({
   const containerRef = useRef<HTMLDivElement>(null);
   const pmRef = useRef<PredictMarketInstance | null>(null);
   const tokenRef = useRef<string>(initialToken);
+  const [sdkReady, setSdkReady] = useState<boolean>(typeof window !== 'undefined' && !!window.PredictMarket);
   const [status, setStatus] = useState<WidgetStatus>('loading');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -84,6 +85,7 @@ export function EmbedWidget({
 
     // 清除舊實例
     pmRef.current?.destroy();
+    containerRef.current.innerHTML = '';
 
     try {
       const pm = new window.PredictMarket({
@@ -135,28 +137,28 @@ export function EmbedWidget({
     }
   }, [resolvedEmbedBaseUrl, effectiveMode, marketId, height, category, onTradeComplete, refreshToken]);
 
-  // ── SDK 載入 ──────────────────────────────────────────────────────────────
+  // ── SDK 載入（只做一次）────────────────────────────────────────────────────
   useEffect(() => {
-    // 已載入直接初始化
+    // 已載入直接標記 ready
     if (window.PredictMarket) {
-      initializeWidget();
+      setSdkReady(true);
       return;
     }
 
     // 避免重複加入 script 標籤
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${sdkUrl}"]`);
     if (existing) {
-      existing.addEventListener('load', initializeWidget);
+      const handleLoad = () => setSdkReady(true);
+      existing.addEventListener('load', handleLoad);
       return () => {
-        existing.removeEventListener('load', initializeWidget);
-        pmRef.current?.destroy();
+        existing.removeEventListener('load', handleLoad);
       };
     }
 
     const script = document.createElement('script');
     script.src = sdkUrl;
     script.async = true;
-    script.onload = initializeWidget;
+    script.onload = () => setSdkReady(true);
     script.onerror = () => {
       setErrorMessage('無法載入預測市場 SDK，請確認 predict-markets 服務正在執行');
       setStatus('error');
@@ -166,8 +168,15 @@ export function EmbedWidget({
     return () => {
       pmRef.current?.destroy();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sdkUrl]);
+
+  // ── SDK ready 後，依目前使用者/模式重新初始化 ─────────────────────────────
+  useEffect(() => {
+    if (!sdkReady) return;
+    setStatus('loading');
+    setErrorMessage('');
+    initializeWidget();
+  }, [sdkReady, initializeWidget, userId, initialToken]);
 
   // ── Token 更新時通知 SDK ──────────────────────────────────────────────────
   useEffect(() => {
