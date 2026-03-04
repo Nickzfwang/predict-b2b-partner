@@ -45,7 +45,6 @@ export function EmbedWidget({
   const containerRef = useRef<HTMLDivElement>(null);
   const pmRef = useRef<PredictMarketInstance | null>(null);
   const tokenRef = useRef<string>(initialToken);
-  const [sdkReady, setSdkReady] = useState<boolean>(typeof window !== 'undefined' && !!window.PredictMarket);
   const [status, setStatus] = useState<WidgetStatus>('loading');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -137,52 +136,55 @@ export function EmbedWidget({
     }
   }, [resolvedEmbedBaseUrl, effectiveMode, marketId, height, category, onTradeComplete, refreshToken]);
 
-  // ── SDK 載入（只做一次）────────────────────────────────────────────────────
+  // ── SDK 載入與 Widget 初始化 ───────────────────────────────────────────────
   useEffect(() => {
-    // 已載入直接標記 ready
+    let cancelled = false;
+
+    const mountWidget = () => {
+      if (cancelled) return;
+      tokenRef.current = initialToken;
+      setStatus('loading');
+      setErrorMessage('');
+      initializeWidget();
+    };
+
+    const handleScriptError = () => {
+      if (cancelled) return;
+      setErrorMessage('無法載入預測市場 SDK，請確認 predict-markets 服務正在執行');
+      setStatus('error');
+    };
+
+    // 已載入直接初始化
     if (window.PredictMarket) {
-      setSdkReady(true);
+      mountWidget();
       return;
     }
 
     // 避免重複加入 script 標籤
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${sdkUrl}"]`);
     if (existing) {
-      const handleLoad = () => setSdkReady(true);
-      existing.addEventListener('load', handleLoad);
+      existing.addEventListener('load', mountWidget);
+      existing.addEventListener('error', handleScriptError);
       return () => {
-        existing.removeEventListener('load', handleLoad);
+        cancelled = true;
+        existing.removeEventListener('load', mountWidget);
+        existing.removeEventListener('error', handleScriptError);
+        pmRef.current?.destroy();
       };
     }
 
     const script = document.createElement('script');
     script.src = sdkUrl;
     script.async = true;
-    script.onload = () => setSdkReady(true);
-    script.onerror = () => {
-      setErrorMessage('無法載入預測市場 SDK，請確認 predict-markets 服務正在執行');
-      setStatus('error');
-    };
+    script.onload = mountWidget;
+    script.onerror = handleScriptError;
     document.head.appendChild(script);
 
     return () => {
+      cancelled = true;
       pmRef.current?.destroy();
     };
-  }, [sdkUrl]);
-
-  // ── SDK ready 後，依目前使用者/模式重新初始化 ─────────────────────────────
-  useEffect(() => {
-    if (!sdkReady) return;
-    setStatus('loading');
-    setErrorMessage('');
-    initializeWidget();
-  }, [sdkReady, initializeWidget, userId, initialToken]);
-
-  // ── Token 更新時通知 SDK ──────────────────────────────────────────────────
-  useEffect(() => {
-    tokenRef.current = initialToken;
-    pmRef.current?.setToken(initialToken);
-  }, [initialToken]);
+  }, [sdkUrl, initializeWidget, initialToken, userId]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
