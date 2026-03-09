@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClientFromParam } from '@/lib/get-pm-client';
 
 /**
  * GET /api/markets
@@ -11,8 +11,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
 
+    const modeParam = searchParams.get('mode');
+    const { client: pmClient } = getPMClientFromParam(modeParam);
+
     const params: Record<string, string> = {};
     for (const [key, value] of searchParams.entries()) {
+      if (key === 'mode') continue;
       params[key] = value;
     }
 

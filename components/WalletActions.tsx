@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 interface WalletActionsProps {
   userId: string;
   onSuccess?: () => void;
+  walletMode?: string;
 }
 
-export function WalletActions({ userId, onSuccess }: WalletActionsProps) {
+export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsProps) {
   const router = useRouter();
   const [depositAmount, setDepositAmount] = useState('100');
   const [withdrawAmount, setWithdrawAmount] = useState('50');
@@ -29,7 +30,7 @@ export function WalletActions({ userId, onSuccess }: WalletActionsProps) {
     }
 
     try {
-      const res = await fetch(`/api/wallet/${type}`, {
+      const res = await fetch(`/api/wallet/${type}?mode=${walletMode ?? 'transfer'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

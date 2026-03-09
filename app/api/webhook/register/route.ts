@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClientFromParam } from '@/lib/get-pm-client';
 import { toApiErrorResponse } from '@/app/api/_utils/pm-error';
 
 const DEFAULT_EVENTS = ['trade.created', 'user.balance_changed', 'position.settled'];
@@ -25,6 +25,9 @@ function buildCallbackUrl(request: NextRequest): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const modeParam = request.nextUrl.searchParams.get('mode');
+    const { client: pmClient } = getPMClientFromParam(modeParam);
+
     const body = (await request.json().catch(() => ({}))) as {
       url?: unknown;
       events?: unknown;

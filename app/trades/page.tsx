@@ -1,8 +1,9 @@
 import { TradeForm } from '@/components/TradeForm';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClient } from '@/lib/get-pm-client';
+import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 
 interface TradesPageProps {
-  searchParams: Promise<{ user?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string }>;
 }
 
 function normalizeTrades(value: unknown): Array<Record<string, unknown>> {
@@ -65,9 +66,10 @@ function buildMarketOptions(
   return [...map.values()];
 }
 
-async function getTradesData(userId: string) {
+async function getTradesData(userId: string, walletMode: WalletMode) {
   try {
-    const externalUserId = `demo_${userId}`;
+    const pmClient = getPMClient(walletMode);
+    const externalUserId = `${getUserPrefix(walletMode)}${userId}`;
 
     await pmClient.syncUser({
       external_user_id: externalUserId,
@@ -95,8 +97,9 @@ async function getTradesData(userId: string) {
 }
 
 export default async function TradesPage({ searchParams }: TradesPageProps) {
-  const { user = 'alice' } = await searchParams;
-  const data = await getTradesData(user);
+  const { user = 'alice', mode: modeParam } = await searchParams;
+  const walletMode = resolveWalletMode(modeParam);
+  const data = await getTradesData(user, walletMode);
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -111,6 +114,7 @@ export default async function TradesPage({ searchParams }: TradesPageProps) {
           <TradeForm
             userId={user}
             markets={data?.marketOptions ?? []}
+            walletMode={walletMode}
           />
         </section>
 

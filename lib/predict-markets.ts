@@ -168,12 +168,17 @@ function isPMApiResponse<T>(value: unknown): value is PMApiResponse<T> {
   );
 }
 
+// ─── Credentials ─────────────────────────────────────────────────────────────
+
+export interface PMCredentials {
+  apiKey: string;
+  apiSecret: string;
+  baseUrl: string;
+}
+
 // ─── HMAC 簽名工具 ───────────────────────────────────────────────────────────
 
-function buildSignature(method: string, path: string, body: string): { timestamp: string; signature: string } {
-  const apiSecret = process.env.PM_API_SECRET;
-  if (!apiSecret) throw new Error('PM_API_SECRET is not set');
-
+function buildSignature(apiSecret: string, method: string, path: string, body: string): { timestamp: string; signature: string } {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const bodyHash = createHash('sha256').update(body).digest('hex');
   const signingString = `${method.toUpperCase()}\n${path}\n${timestamp}\n${bodyHash}`;
@@ -185,16 +190,17 @@ function buildSignature(method: string, path: string, body: string): { timestamp
 // ─── HTTP Client ─────────────────────────────────────────────────────────────
 
 async function pmFetch<T>(
+  credentials: PMCredentials,
   method: string,
   endpoint: string,
   body?: Record<string, unknown>,
   queryParams?: Record<string, string>,
 ): Promise<PMApiResponse<T>> {
-  const apiKey = process.env.PM_API_KEY;
-  const baseUrl = process.env.PM_BASE_URL;
+  const { apiKey, apiSecret, baseUrl } = credentials;
 
-  if (!apiKey) throw new Error('PM_API_KEY is not set');
-  if (!baseUrl) throw new Error('PM_BASE_URL is not set');
+  if (!apiKey) throw new Error(`PM API Key is not set (received empty value). Check your .env.local credentials and restart the dev server.`);
+  if (!apiSecret) throw new Error(`PM API Secret is not set (received empty value). Check your .env.local credentials and restart the dev server.`);
+  if (!baseUrl) throw new Error(`PM Base URL is not set (received empty value). Check your .env.local credentials and restart the dev server.`);
 
   const path = `/api/v1/b2b${endpoint}`;
   const bodyString = body ? JSON.stringify(body) : '';
@@ -207,7 +213,7 @@ async function pmFetch<T>(
   // PM 的 replay protection 會拒絕同秒重複簽名。
   // 這裡在碰到 "Signature already used" 時延遲 1.1 秒後重試一次。
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const { timestamp, signature } = buildSignature(method, path, bodyString);
+    const { timestamp, signature } = buildSignature(apiSecret, method, path, bodyString);
 
     const response = await fetch(url.toString(), {
       method,
@@ -279,120 +285,150 @@ async function pmFetch<T>(
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-export const pmClient = {
-  /** 取得市場列表 */
-  getMarkets(params?: Record<string, string>) {
-    return pmFetch<PMMarket[]>('GET', '/markets', undefined, params);
-  },
+export interface PMWalletConfig {
+  wallet_mode: string;
+  seamless_callback_url: string;
+  seamless_timeout_ms: number;
+}
 
-  /** 取得單一市場 */
-  getMarket(id: string) {
-    return pmFetch<PMMarket>('GET', `/markets/${id}`);
-  },
+/** 建立一組綁定特定 credentials 的 pmClient */
+export function createPMClient(credentials: PMCredentials) {
+  const c = credentials;
 
-  /** 同步 / 建立 Demo 用戶 */
-  syncUser(payload: {
-    external_user_id: string;
-    display_name: string;
-    email?: string;
-    initial_balance?: number;
-  }) {
-    return pmFetch<PMUser>('POST', '/users/sync', payload);
-  },
+  return {
+    /** 取得市場列表 */
+    getMarkets(params?: Record<string, string>) {
+      return pmFetch<PMMarket[]>(c, 'GET', '/markets', undefined, params);
+    },
 
-  /** 取得用戶資訊 */
-  getUser(externalUserId: string) {
-    return pmFetch<PMUser>('GET', `/users/${externalUserId}`);
-  },
+    /** 取得單一市場 */
+    getMarket(id: string) {
+      return pmFetch<PMMarket>(c, 'GET', `/markets/${id}`);
+    },
 
-  /** 入金 */
-  deposit(externalUserId: string, payload: {
-    amount: number;
-    reference_id?: string;
-    note?: string;
-  }) {
-    return pmFetch<PMBalanceTransaction>('POST', `/users/${externalUserId}/deposit`, payload);
-  },
+    /** 同步 / 建立 Demo 用戶 */
+    syncUser(payload: {
+      external_user_id: string;
+      display_name: string;
+      email?: string;
+      initial_balance?: number;
+    }) {
+      return pmFetch<PMUser>(c, 'POST', '/users/sync', payload);
+    },
 
-  /** 出金 */
-  withdraw(externalUserId: string, payload: {
-    amount: number;
-    reference_id?: string;
-    note?: string;
-  }) {
-    return pmFetch<PMBalanceTransaction>('POST', `/users/${externalUserId}/withdraw`, payload);
-  },
+    /** 取得用戶資訊 */
+    getUser(externalUserId: string) {
+      return pmFetch<PMUser>(c, 'GET', `/users/${externalUserId}`);
+    },
 
-  /** 產生 embed token（供 iframe SDK 使用） */
-  getEmbedToken(payload: {
-    external_user_id?: string;
-    permissions?: Array<'view_markets' | 'place_trades' | 'view_portfolio'>;
-    ttl?: number;
-  }) {
-    return pmFetch<PMEmbedToken>('POST', '/auth/embed-token', payload);
-  },
+    /** 入金 */
+    deposit(externalUserId: string, payload: {
+      amount: number;
+      reference_id?: string;
+      note?: string;
+    }) {
+      return pmFetch<PMBalanceTransaction>(c, 'POST', `/users/${externalUserId}/deposit`, payload);
+    },
 
-  /** 下單 */
-  placeTrade(payload: {
-    external_user_id: string;
-    market_id: string;
-    type: 'buy' | 'sell';
-    outcome: 'yes' | 'no';
-    shares: number;
-  }) {
-    return pmFetch<PMTrade>('POST', '/trades', payload);
-  },
+    /** 出金 */
+    withdraw(externalUserId: string, payload: {
+      amount: number;
+      reference_id?: string;
+      note?: string;
+    }) {
+      return pmFetch<PMBalanceTransaction>(c, 'POST', `/users/${externalUserId}/withdraw`, payload);
+    },
 
-  /** 交易列表 */
-  getTrades(params?: Record<string, string>) {
-    return pmFetch<PMTrade[]>('GET', '/trades', undefined, params);
-  },
+    /** 產生 embed token（供 iframe SDK 使用） */
+    getEmbedToken(payload: {
+      external_user_id?: string;
+      permissions?: Array<'view_markets' | 'place_trades' | 'view_portfolio'>;
+      ttl?: number;
+    }) {
+      return pmFetch<PMEmbedToken>(c, 'POST', '/auth/embed-token', payload);
+    },
 
-  /** 持倉列表 */
-  getPositions(params?: Record<string, string>) {
-    return pmFetch<PMPosition[]>('GET', '/positions', undefined, params);
-  },
+    /** 下單 */
+    placeTrade(payload: {
+      external_user_id: string;
+      market_id: string;
+      type: 'buy' | 'sell';
+      outcome: 'yes' | 'no';
+      shares: number;
+    }) {
+      return pmFetch<PMTrade>(c, 'POST', '/trades', payload);
+    },
 
-  /** 單一市場交易列表 */
-  getMarketTrades(marketId: string, params?: Record<string, string>) {
-    return pmFetch<PMTrade[]>('GET', `/markets/${marketId}/trades`, undefined, params);
-  },
+    /** 交易列表 */
+    getTrades(params?: Record<string, string>) {
+      return pmFetch<PMTrade[]>(c, 'GET', '/trades', undefined, params);
+    },
 
-  /** 單一市場價格歷史 */
-  getMarketPriceHistory(marketId: string, params?: Record<string, string>) {
-    return pmFetch<PMPriceHistoryPoint[]>('GET', `/markets/${marketId}/price-history`, undefined, params);
-  },
+    /** 持倉列表 */
+    getPositions(params?: Record<string, string>) {
+      return pmFetch<PMPosition[]>(c, 'GET', '/positions', undefined, params);
+    },
 
-  /** 建立 webhook */
-  createWebhook(payload: { url: string; events: string[] }) {
-    return pmFetch<PMWebhook>('POST', '/webhooks', payload);
-  },
+    /** 單一市場交易列表 */
+    getMarketTrades(marketId: string, params?: Record<string, string>) {
+      return pmFetch<PMTrade[]>(c, 'GET', `/markets/${marketId}/trades`, undefined, params);
+    },
 
-  /** 取得 webhook 列表 */
-  getWebhooks() {
-    return pmFetch<PMWebhook[]>('GET', '/webhooks');
-  },
+    /** 單一市場價格歷史 */
+    getMarketPriceHistory(marketId: string, params?: Record<string, string>) {
+      return pmFetch<PMPriceHistoryPoint[]>(c, 'GET', `/markets/${marketId}/price-history`, undefined, params);
+    },
 
-  /** 更新 webhook */
-  updateWebhook(webhookId: string, payload: { url?: string; events?: string[]; status?: 'active' | 'disabled' }) {
-    return pmFetch<PMWebhook>('PUT', `/webhooks/${webhookId}`, payload);
-  },
+    /** 建立 webhook */
+    createWebhook(payload: { url: string; events: string[] }) {
+      return pmFetch<PMWebhook>(c, 'POST', '/webhooks', payload);
+    },
 
-  /** 刪除 webhook */
-  deleteWebhook(webhookId: string) {
-    return pmFetch<{ id: string }>('DELETE', `/webhooks/${webhookId}`);
-  },
+    /** 取得 webhook 列表 */
+    getWebhooks() {
+      return pmFetch<PMWebhook[]>(c, 'GET', '/webhooks');
+    },
 
-  /** 總覽分析 */
-  getAnalyticsOverview() {
-    return pmFetch<PMAnalyticsOverview>('GET', '/analytics/overview');
-  },
+    /** 更新 webhook */
+    updateWebhook(webhookId: string, payload: { url?: string; events?: string[]; status?: 'active' | 'disabled' }) {
+      return pmFetch<PMWebhook>(c, 'PUT', `/webhooks/${webhookId}`, payload);
+    },
 
-  /** 每日分析 */
-  getAnalyticsDaily(params?: Record<string, string>) {
-    return pmFetch<PMAnalyticsDaily[]>('GET', '/analytics/daily', undefined, params);
-  },
-};
+    /** 刪除 webhook */
+    deleteWebhook(webhookId: string) {
+      return pmFetch<{ id: string }>(c, 'DELETE', `/webhooks/${webhookId}`);
+    },
+
+    /** 總覽分析 */
+    getAnalyticsOverview() {
+      return pmFetch<PMAnalyticsOverview>(c, 'GET', '/analytics/overview');
+    },
+
+    /** 每日分析 */
+    getAnalyticsDaily(params?: Record<string, string>) {
+      return pmFetch<PMAnalyticsDaily[]>(c, 'GET', '/analytics/daily', undefined, params);
+    },
+
+    /** 設定 Seamless Wallet callback URL */
+    configWallet(payload: { seamless_callback_url: string; seamless_timeout_ms?: number }) {
+      return pmFetch<PMWalletConfig>(c, 'PUT', '/wallet/config', payload);
+    },
+
+    /** 測試 Seamless Wallet callback 連通性 */
+    testCallback(payload: { external_user_id: string }) {
+      return pmFetch<{ status: string; balance?: number; currency?: string; message?: string }>(c, 'POST', '/wallet/test-callback', payload);
+    },
+  };
+}
+
+export type PMClient = ReturnType<typeof createPMClient>;
+
+/** 預設 client（向下相容，使用 process.env 的 Transfer 模式 credentials） */
+export const pmClient = createPMClient({
+  apiKey: process.env.PM_API_KEY ?? '',
+  apiSecret: process.env.PM_API_SECRET ?? '',
+  baseUrl: process.env.PM_BASE_URL ?? '',
+});
 
 // ─── Webhook 驗簽 ────────────────────────────────────────────────────────────
 

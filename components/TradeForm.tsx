@@ -12,9 +12,10 @@ interface TradeFormProps {
   userId: string;
   markets: MarketOption[];
   onSuccess?: () => void;
+  walletMode?: string;
 }
 
-export function TradeForm({ userId, markets, onSuccess }: TradeFormProps) {
+export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormProps) {
   const router = useRouter();
   const initialMarketId = markets[0]?.id ?? '';
   const [marketId, setMarketId] = useState(initialMarketId);
@@ -46,7 +47,7 @@ export function TradeForm({ userId, markets, onSuccess }: TradeFormProps) {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/trades', {
+      const res = await fetch(`/api/trades?mode=${walletMode ?? 'transfer'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, market_id: normalizedMarketId, type, outcome, shares: parsedShares }),

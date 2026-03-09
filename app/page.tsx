@@ -1,11 +1,12 @@
 import { Suspense } from 'react';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClient } from '@/lib/get-pm-client';
+import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { ARTICLES } from '@/data/articles';
 import { ArticleCard } from '@/components/ArticleCard';
 import { EmbedWidget } from '@/components/EmbedWidget';
 
 interface HomePageProps {
-  searchParams: Promise<{ user?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string }>;
 }
 
 const MARKET_SNAPSHOT = [
@@ -83,16 +84,19 @@ const TREND_SERIES = [
   { label: '能源價格節奏', value: '區間震盪', change: '+0.5%', positive: true, points: [52, 50, 54, 53, 51, 55, 54, 56] },
 ];
 
-async function getEmbedData(userId: string) {
+async function getEmbedData(userId: string, walletMode: WalletMode) {
   try {
+    const pmClient = getPMClient(walletMode);
+    const externalUserId = `${getUserPrefix(walletMode)}${userId}`;
+
     await pmClient.syncUser({
-      external_user_id: `demo_${userId}`,
+      external_user_id: externalUserId,
       display_name: userId.charAt(0).toUpperCase() + userId.slice(1),
       initial_balance: 1000,
     });
 
     const tokenRes = await pmClient.getEmbedToken({
-      external_user_id: `demo_${userId}`,
+      external_user_id: externalUserId,
       permissions: ['view_markets', 'place_trades', 'view_portfolio'],
     });
 
@@ -107,9 +111,10 @@ async function getEmbedData(userId: string) {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const { user = 'alice' } = await searchParams;
+  const { user = 'alice', mode: modeParam } = await searchParams;
+  const walletMode = resolveWalletMode(modeParam);
   const displayName = user.charAt(0).toUpperCase() + user.slice(1);
-  const embedData = await getEmbedData(user);
+  const embedData = await getEmbedData(user, walletMode);
 
   const embedBaseUrl =
     embedData?.embedBaseUrl ?? process.env.NEXT_PUBLIC_PM_EMBED_BASE_URL ?? 'http://localhost:8000/embed';
@@ -206,6 +211,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 userId={user}
                 mode="markets"
                 height={620}
+                walletMode={walletMode}
               />
             </Suspense>
           </div>
@@ -309,7 +315,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {ARTICLES.map((article) => (
-            <ArticleCard key={article.id} article={article} user={user} />
+            <ArticleCard key={article.id} article={article} user={user} mode={walletMode} />
           ))}
         </div>
       </section>

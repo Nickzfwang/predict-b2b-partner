@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { UserSwitcher } from './UserSwitcher';
+import { ModeSwitcher } from './ModeSwitcher';
 import { NavLinks } from './NavLinks';
 import { WebhookNotifications } from './WebhookNotifications';
 import { MobileNavDrawer } from './MobileNavDrawer';
@@ -38,12 +39,20 @@ export function Navbar() {
             </Suspense>
 
             <div className="hidden sm:block">
+              <Suspense>
+                <ModeSwitcher />
+              </Suspense>
+            </div>
+
+            <div className="hidden sm:block">
               <Suspense fallback={<UserSwitcherFallback />}>
                 <UserSwitcher />
               </Suspense>
             </div>
 
-            <MobileNavDrawer />
+            <Suspense>
+              <MobileNavDrawer />
+            </Suspense>
           </div>
         </div>
       </div>

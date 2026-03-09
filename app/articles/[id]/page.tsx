@@ -1,19 +1,23 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClient } from '@/lib/get-pm-client';
+import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { getArticleById } from '@/data/articles';
 import { EmbedWidget } from '@/components/EmbedWidget';
 
 interface ArticlePageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ user?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string }>;
 }
 
-async function getEmbedToken(userId: string) {
+async function getEmbedToken(userId: string, walletMode: WalletMode) {
   try {
+    const pmClient = getPMClient(walletMode);
+    const externalUserId = `${getUserPrefix(walletMode)}${userId}`;
+
     const res = await pmClient.getEmbedToken({
-      external_user_id: `demo_${userId}`,
+      external_user_id: externalUserId,
       permissions: ['view_markets', 'place_trades', 'view_portfolio'],
     });
     return {
@@ -27,12 +31,13 @@ async function getEmbedToken(userId: string) {
 
 export default async function ArticlePage({ params, searchParams }: ArticlePageProps) {
   const { id } = await params;
-  const { user = 'alice' } = await searchParams;
+  const { user = 'alice', mode: modeParam } = await searchParams;
+  const walletMode = resolveWalletMode(modeParam);
 
   const article = getArticleById(id);
   if (!article) notFound();
 
-  const embedData = await getEmbedToken(user);
+  const embedData = await getEmbedToken(user, walletMode);
   const embedBaseUrl =
     embedData?.embedBaseUrl ?? process.env.NEXT_PUBLIC_PM_EMBED_BASE_URL ?? 'http://localhost:8000/embed';
 
@@ -40,7 +45,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       {/* 返回首頁 */}
       <Link
-        href={`/?user=${user}`}
+        href={`/?user=${user}&mode=${walletMode}`}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900"
       >
         <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -125,6 +130,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
             mode={article.relatedMarketId ? 'trade' : 'markets'}
             marketId={article.relatedMarketId}
             height={520}
+            walletMode={walletMode}
           />
         ) : (
           <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white text-center">

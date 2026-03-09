@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClientFromParam } from '@/lib/get-pm-client';
+import { getUserPrefix } from '@/lib/wallet-mode';
 import { toApiErrorResponse } from '@/app/api/_utils/pm-error';
-
-const USER_PREFIX = 'demo_';
 
 export async function GET(request: NextRequest) {
   try {
+    const modeParam = request.nextUrl.searchParams.get('mode');
+    const { client: pmClient, mode } = getPMClientFromParam(modeParam);
+    const userPrefix = getUserPrefix(mode);
+
     const params: Record<string, string> = {};
     for (const [key, value] of request.nextUrl.searchParams.entries()) {
+      if (key === 'mode') continue;
       params[key] = value;
     }
 
     if (params.userId && !params.external_user_id) {
-      params.external_user_id = `${USER_PREFIX}${params.userId}`;
+      params.external_user_id = `${userPrefix}${params.userId}`;
       delete params.userId;
     }
 
@@ -26,6 +30,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const modeParam = request.nextUrl.searchParams.get('mode');
+    const { client: pmClient, mode } = getPMClientFromParam(modeParam);
+    const userPrefix = getUserPrefix(mode);
+
     const body = (await request.json()) as {
       userId?: unknown;
       market_id?: unknown;
@@ -60,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     const res = await pmClient.placeTrade({
-      external_user_id: `${USER_PREFIX}${body.userId}`,
+      external_user_id: `${userPrefix}${body.userId}`,
       market_id: body.market_id,
       type: body.type,
       outcome: body.outcome,

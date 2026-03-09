@@ -17,6 +17,7 @@ interface NavLinksProps {
 export function NavLinks({ mobile = false }: NavLinksProps) {
   const searchParams = useSearchParams();
   const user = searchParams.get('user');
+  const mode = searchParams.get('mode');
 
   const navClassName = mobile
     ? 'flex items-center gap-1.5 overflow-x-auto px-1 py-1.5 text-sm font-medium text-slate-700 sm:hidden'
@@ -28,7 +29,11 @@ export function NavLinks({ mobile = false }: NavLinksProps) {
   return (
     <nav className={navClassName}>
       {NAV_ITEMS.map((item) => {
-        const href = user ? `${item.href}?user=${encodeURIComponent(user)}` : item.href;
+        const params = new URLSearchParams();
+        if (user) params.set('user', user);
+        if (mode) params.set('mode', mode);
+        const qs = params.toString();
+        const href = qs ? `${item.href}?${qs}` : item.href;
         return (
           <Link key={item.href} href={href} className={linkClassName}>
             {item.label}

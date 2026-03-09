@@ -15,6 +15,7 @@ const DEMO_USERS = ['alice', 'bob', 'carol'];
 export function MobileNavDrawer() {
   const searchParams = useSearchParams();
   const user = searchParams.get('user');
+  const mode = searchParams.get('mode');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -52,7 +53,11 @@ export function MobileNavDrawer() {
               <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500">導覽選單</p>
               <nav className="grid grid-cols-2 gap-2">
                 {MOBILE_NAV_ITEMS.map((item) => {
-                  const href = user ? `${item.href}?user=${encodeURIComponent(user)}` : item.href;
+                  const navParams = new URLSearchParams();
+                  if (user) navParams.set('user', user);
+                  if (mode) navParams.set('mode', mode);
+                  const navQs = navParams.toString();
+                  const href = navQs ? `${item.href}?${navQs}` : item.href;
                   return (
                     <Link
                       key={item.href}

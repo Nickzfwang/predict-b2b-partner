@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClient } from '@/lib/get-pm-client';
+import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 
 interface PortfolioPageProps {
-  searchParams: Promise<{ user?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string }>;
 }
 
 interface PositionView {
@@ -112,9 +113,11 @@ function normalizeTrades(value: unknown): TradeView[] {
   });
 }
 
-async function getPortfolioData(userId: string) {
+async function getPortfolioData(userId: string, walletMode: WalletMode) {
   try {
-    const demoExternalUserId = `demo_${userId}`;
+    const pmClient = getPMClient(walletMode);
+    const prefix = getUserPrefix(walletMode);
+    const demoExternalUserId = `${prefix}${userId}`;
     const candidateUserIds = [demoExternalUserId, userId];
 
     const syncUserRes = await pmClient.syncUser({
@@ -199,8 +202,9 @@ async function getPortfolioData(userId: string) {
 }
 
 export default async function PortfolioPage({ searchParams }: PortfolioPageProps) {
-  const { user = 'alice' } = await searchParams;
-  const data = await getPortfolioData(user);
+  const { user = 'alice', mode: modeParam } = await searchParams;
+  const walletMode = resolveWalletMode(modeParam);
+  const data = await getPortfolioData(user, walletMode);
 
   const displayName = user.charAt(0).toUpperCase() + user.slice(1);
   const balance = typeof data?.user?.balance === 'number' ? data.user.balance : 0;
@@ -241,7 +245,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
       <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="總交易次數" value={String(totalTrades)} icon="🔄" />
         <StatCard label="加入時間" value={joinedDate} icon="📅" />
-        <StatCard label="帳號 ID" value={`demo_${user}`} icon="🪪" mono />
+        <StatCard label="帳號 ID" value={`${getUserPrefix(walletMode)}${user}`} icon="🪪" mono />
         <StatCard label="總投入" value={`$${totals.invested.toFixed(2)}`} icon="💵" />
         <StatCard label="持倉市值" value={`$${totals.currentValue.toFixed(2)}`} icon="📈" />
         <StatCard
@@ -317,7 +321,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
       <section className="table-surface p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">🧾 最近交易（API）</h2>
-          <Link href={`/trades?user=${user}`} className="text-xs text-blue-700 hover:underline">前往交易中心</Link>
+          <Link href={`/trades?user=${user}&mode=${walletMode}`} className="text-xs text-blue-700 hover:underline">前往交易中心</Link>
         </div>
 
         {data?.trades?.length ? (

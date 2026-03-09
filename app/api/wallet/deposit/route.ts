@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClientFromParam } from '@/lib/get-pm-client';
+import { getUserPrefix } from '@/lib/wallet-mode';
 import { toApiErrorResponse } from '@/app/api/_utils/pm-error';
-
-const USER_PREFIX = 'demo_';
 
 export async function POST(request: NextRequest) {
   try {
+    const modeParam = request.nextUrl.searchParams.get('mode');
+    const { client: pmClient, mode } = getPMClientFromParam(modeParam);
+    const userPrefix = getUserPrefix(mode);
+
     const body = (await request.json()) as {
       userId?: unknown;
       amount?: unknown;
@@ -21,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'amount must be a number >= 0.01' }, { status: 400 });
     }
 
-    const res = await pmClient.deposit(`${USER_PREFIX}${body.userId}`, {
+    const res = await pmClient.deposit(`${userPrefix}${body.userId}`, {
       amount: body.amount,
       ...(typeof body.reference_id === 'string' ? { reference_id: body.reference_id } : {}),
       ...(typeof body.note === 'string' ? { note: body.note } : {}),

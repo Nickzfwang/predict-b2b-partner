@@ -1,7 +1,8 @@
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClient } from '@/lib/get-pm-client';
+import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 
 interface PositionsPageProps {
-  searchParams: Promise<{ user?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string }>;
 }
 
 interface PositionView {
@@ -79,9 +80,11 @@ function buildPositionsFromTrades(tradesRaw: unknown): PositionView[] {
   return [...grouped.values()];
 }
 
-async function getPositionsData(userId: string) {
+async function getPositionsData(userId: string, walletMode: WalletMode) {
   try {
-    const demoExternalUserId = `demo_${userId}`;
+    const pmClient = getPMClient(walletMode);
+    const prefix = getUserPrefix(walletMode);
+    const demoExternalUserId = `${prefix}${userId}`;
     const candidateUserIds = [demoExternalUserId, userId];
 
     await pmClient.syncUser({
@@ -143,8 +146,9 @@ async function getPositionsData(userId: string) {
 }
 
 export default async function PositionsPage({ searchParams }: PositionsPageProps) {
-  const { user = 'alice' } = await searchParams;
-  const positions = await getPositionsData(user);
+  const { user = 'alice', mode: modeParam } = await searchParams;
+  const walletMode = resolveWalletMode(modeParam);
+  const positions = await getPositionsData(user, walletMode);
 
   const totals = positions.reduce(
     (acc, p) => {

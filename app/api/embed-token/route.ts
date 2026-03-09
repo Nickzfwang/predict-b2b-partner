@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pmClient } from '@/lib/predict-markets';
+import { getPMClientFromParam } from '@/lib/get-pm-client';
+import { getUserPrefix } from '@/lib/wallet-mode';
 
 const DEFAULT_BALANCE = 1000;
-const USER_PREFIX = 'demo_';
 
 /**
  * POST /api/embed-token
@@ -14,6 +14,10 @@ const USER_PREFIX = 'demo_';
  */
 export async function POST(request: NextRequest) {
   try {
+    const modeParam = request.nextUrl.searchParams.get('mode');
+    const { client: pmClient, mode } = getPMClientFromParam(modeParam);
+    const userPrefix = getUserPrefix(mode);
+
     const body = (await request.json()) as {
       userId?: unknown;
       permissions?: unknown;
@@ -26,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const externalUserId = `${USER_PREFIX}${body.userId}`;
+    const externalUserId = `${userPrefix}${body.userId}`;
 
     // 同步用戶（已存在則更新，不存在則建立）
     await pmClient.syncUser({

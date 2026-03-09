@@ -5,6 +5,7 @@ import { Article } from '@/data/articles';
 interface ArticleCardProps {
   article: Article;
   user: string;
+  mode?: string;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -15,12 +16,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   '總體經濟': 'bg-slate-100 text-slate-700',
 };
 
-export function ArticleCard({ article, user }: ArticleCardProps) {
+export function ArticleCard({ article, user, mode }: ArticleCardProps) {
   const categoryColor = CATEGORY_COLORS[article.category] ?? 'bg-gray-100 text-gray-700';
 
   return (
     <Link
-      href={`/articles/${article.id}?user=${user}`}
+      href={`/articles/${article.id}?user=${user}${mode ? `&mode=${encodeURIComponent(mode)}` : ''}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
     >
       {/* 文章圖片 */}

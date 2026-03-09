@@ -26,6 +26,8 @@ export interface EmbedWidgetProps {
   category?: string;
   /** 交易完成時的回呼 */
   onTradeComplete?: (data: TradeCompletedData) => void;
+  /** 錢包模式（transfer | internal） */
+  walletMode?: string;
   className?: string;
 }
 
@@ -40,6 +42,7 @@ export function EmbedWidget({
   height = 600,
   category,
   onTradeComplete,
+  walletMode,
   className = '',
 }: EmbedWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +65,7 @@ export function EmbedWidget({
   // ── Token 刷新 ────────────────────────────────────────────────────────────
   const refreshToken = useCallback(async () => {
     try {
-      const res = await fetch('/api/embed-token', {
+      const res = await fetch(`/api/embed-token?mode=${walletMode ?? 'transfer'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -76,7 +79,7 @@ export function EmbedWidget({
     } catch (err) {
       console.error('[EmbedWidget] Token refresh error:', err);
     }
-  }, [userId]);
+  }, [userId, walletMode]);
 
   // ── Widget 初始化 ─────────────────────────────────────────────────────────
   const initializeWidget = useCallback(() => {

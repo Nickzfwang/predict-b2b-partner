@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
-import { pmClient } from '@/lib/predict-markets';
+import { NextRequest, NextResponse } from 'next/server';
+import { getPMClientFromParam } from '@/lib/get-pm-client';
 import { toApiErrorResponse } from '@/app/api/_utils/pm-error';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const modeParam = request.nextUrl.searchParams.get('mode');
+    const { client: pmClient } = getPMClientFromParam(modeParam);
+
     const res = await pmClient.getWebhooks();
     return NextResponse.json(res);
   } catch (error) {
