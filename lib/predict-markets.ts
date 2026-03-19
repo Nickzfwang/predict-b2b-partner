@@ -125,6 +125,135 @@ export interface PMAnalyticsDaily {
   new_users: number;
 }
 
+export interface PMDepositAccount {
+  total_deposit: string;
+  available_balance: string;
+  frozen_balance: string;
+  fee_payable: string;
+  revenue_receivable: string;
+  updated_at: string;
+}
+
+export type PMDepositTransactionType =
+  | 'deposit'
+  | 'withdrawal'
+  | 'freeze'
+  | 'unfreeze'
+  | 'settlement_debit'
+  | 'settlement_credit'
+  | 'fee_debit'
+  | 'revenue_credit';
+
+export interface PMDepositTransaction {
+  id: string;
+  type: PMDepositTransactionType;
+  amount: string;
+  balance_before: string;
+  balance_after: string;
+  frozen_before: string;
+  frozen_after: string;
+  reference_type: string | null;
+  reference_id: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export type PMRiskAlertLevel = 'normal' | 'yellow' | 'orange' | 'red';
+
+export interface PMDepositRisk {
+  risk_alert_level: PMRiskAlertLevel;
+  risk_ratio: number | null;
+  available_balance: string;
+  current_exposure: string;
+  trading_restricted: boolean;
+  last_check_at: string | null;
+  active_alert: {
+    id: string;
+    alert_level: 'yellow' | 'orange' | 'red';
+    triggered_at: string;
+    action_taken: 'notification' | 'restrict_trading' | 'forced_liquidation';
+  } | null;
+}
+
+// ─── Reconciliation 型別 ─────────────────────────────────────────────────
+
+export type PMReconciliationStatus = 'clean' | 'minor_discrepancy' | 'needs_review' | 'critical';
+
+export interface PMReconciliationMarketTrade {
+  market_id: number;
+  market_title: string;
+  trade_count: number;
+  volume: string;
+}
+
+export interface PMReconciliationMarketFee {
+  market_id: number;
+  fee_amount: string;
+}
+
+export interface PMReconciliationMarketSettlement {
+  market_id: number;
+  market_title: string;
+  payout: string;
+  collected: string;
+}
+
+export interface PMReconciliationReport {
+  report_date: string;
+  status: PMReconciliationStatus;
+  summary: {
+    total_trades: number;
+    total_volume: string;
+    total_fees: string;
+    total_settlements: string;
+    revenue_share_amount: string;
+    discrepancy_amount: string;
+  };
+  data: {
+    trades: {
+      total_count: number;
+      total_volume: string;
+      buy_count: number;
+      buy_volume: string;
+      sell_count: number;
+      sell_volume: string;
+      by_market: PMReconciliationMarketTrade[];
+    };
+    fees: {
+      total_collected: string;
+      by_market: PMReconciliationMarketFee[];
+    };
+    settlements: {
+      total_payout: string;
+      total_collected: string;
+      net_settlement: string;
+      by_market: PMReconciliationMarketSettlement[];
+    };
+    revenue_share: {
+      rate: string;
+      base_amount: string;
+      share_amount: string;
+    };
+    discrepancy: {
+      expected_balance: string;
+      actual_balance: string;
+      difference: string;
+      details: string | null;
+    };
+  };
+  balance_snapshot: {
+    total_deposit: string;
+    available_balance: string;
+    frozen_balance: string;
+    fee_payable: string;
+    revenue_receivable: string;
+    risk_ratio: string | null;
+    risk_alert_level: string | null;
+    snapshot_at: string;
+  };
+  generated_at: string;
+}
+
 export interface PMApiResponse<T> {
   success: boolean;
   data: T;
@@ -417,6 +546,26 @@ export function createPMClient(credentials: PMCredentials) {
     /** 測試 Seamless Wallet callback 連通性 */
     testCallback(payload: { external_user_id: string }) {
       return pmFetch<{ status: string; balance?: number; currency?: string; message?: string }>(c, 'POST', '/wallet/test-callback', payload);
+    },
+
+    /** 查詢保證金帳戶餘額 */
+    getDepositAccount() {
+      return pmFetch<PMDepositAccount>(c, 'GET', '/deposit');
+    },
+
+    /** 查詢保證金交易記錄 */
+    getDepositTransactions(params?: Record<string, string>) {
+      return pmFetch<PMDepositTransaction[]>(c, 'GET', '/deposit/transactions', undefined, params);
+    },
+
+    /** 查詢保證金風控狀態 */
+    getDepositRisk() {
+      return pmFetch<PMDepositRisk>(c, 'GET', '/deposit/risk');
+    },
+
+    /** 取得 T+1 日對帳報告 */
+    getReconciliationReport(date: string) {
+      return pmFetch<PMReconciliationReport>(c, 'GET', `/reconciliation/${date}`);
     },
   };
 }

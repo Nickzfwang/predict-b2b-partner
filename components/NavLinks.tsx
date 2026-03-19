@@ -8,6 +8,8 @@ const NAV_ITEMS = [
   { href: '/wallet', label: '錢包' },
   { href: '/trades', label: '交易' },
   { href: '/portfolio', label: '我的投資組合' },
+  { href: '/deposit', label: '保證金' },
+  { href: '/reconciliation', label: '對帳報告' },
 ];
 
 interface NavLinksProps {
