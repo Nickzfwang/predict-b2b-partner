@@ -209,8 +209,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 embedBaseUrl={embedBaseUrl}
                 initialToken={embedData.token}
                 userId={user}
-                mode="markets"
-                height={620}
+                route="/markets"
+                height="620px"
                 walletMode={walletMode}
               />
             </Suspense>

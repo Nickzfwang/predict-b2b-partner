@@ -127,9 +127,8 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
             embedBaseUrl={embedBaseUrl}
             initialToken={embedData.token}
             userId={user}
-            mode={article.relatedMarketId ? 'trade' : 'markets'}
-            marketId={article.relatedMarketId}
-            height={520}
+            route={article.relatedMarketId ? `/markets/${article.relatedMarketId}` : '/markets'}
+            height="520px"
             walletMode={walletMode}
           />
         ) : (

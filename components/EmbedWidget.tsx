@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { PredictMarketInstance, TradeCompletedData } from '@/types/sdk';
+import type {
+  PredictMarketWidget,
+  PredictMarketTheme,
+  TradeCompletedData,
+} from '@/types/sdk';
 
 // ─── 型別 ─────────────────────────────────────────────────────────────────────
-
-export type EmbedMode = 'markets' | 'trade' | 'portfolio' | 'feed';
 
 type WidgetStatus = 'loading' | 'ready' | 'error';
 
@@ -16,17 +18,23 @@ export interface EmbedWidgetProps {
   initialToken: string;
   /** Demo 用戶 ID（例如 'alice'），用於 token 過期時自動刷新 */
   userId: string;
-  /** 渲染模式 */
-  mode: EmbedMode;
-  /** 指定市場 ID（mode='trade' 時必填；未填則降級為 markets 模式） */
-  marketId?: string;
-  /** iframe 高度（px），預設 600 */
-  height?: number;
-  /** 市場分類過濾（mode='markets' 時有效） */
-  category?: string;
+  /** SDK 路由，例如 '/markets', '/portfolio', '/markets/{id}' */
+  route?: string;
+  /** iframe 高度，例如 '600px'，預設 '600px' */
+  height?: string;
+  /** 精簡模式 */
+  compact?: boolean;
+  /** 隱藏 embed header */
+  hideHeader?: boolean;
+  /** 隱藏 embed footer */
+  hideFooter?: boolean;
+  /** 主題設定 */
+  theme?: Partial<PredictMarketTheme>;
+  /** 語系 */
+  locale?: string;
   /** 交易完成時的回呼 */
   onTradeComplete?: (data: TradeCompletedData) => void;
-  /** 錢包模式（transfer | internal） */
+  /** 錢包模式（transfer | seamless） */
   walletMode?: string;
   className?: string;
 }
@@ -37,107 +45,100 @@ export function EmbedWidget({
   embedBaseUrl,
   initialToken,
   userId,
-  mode,
-  marketId,
-  height = 600,
-  category,
+  route = '/markets',
+  height = '600px',
+  compact,
+  hideHeader,
+  hideFooter,
+  theme,
+  locale = 'zh-TW',
   onTradeComplete,
   walletMode,
   className = '',
 }: EmbedWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const pmRef = useRef<PredictMarketInstance | null>(null);
+  const widgetRef = useRef<PredictMarketWidget | null>(null);
   const tokenRef = useRef<string>(initialToken);
   const [status, setStatus] = useState<WidgetStatus>('loading');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // 確定實際渲染模式（marketId 缺失時降級）
-  const effectiveMode: EmbedMode = mode === 'trade' && !marketId ? 'markets' : mode;
-
-  // 優先使用 NEXT_PUBLIC_PM_EMBED_BASE_URL（dev: :5173/embed，prod: CDN/embed）
-  // 這讓 embed 頁面（React route）與 API server（Laravel）可以在不同 port 執行
+  // 優先使用 NEXT_PUBLIC_PM_EMBED_BASE_URL
   const resolvedEmbedBaseUrl =
     process.env.NEXT_PUBLIC_PM_EMBED_BASE_URL ?? embedBaseUrl;
 
-  // SDK script 放在 embed base 的上一層：{origin}/sdk/predict-market-sdk.js
+  // SDK script URL：{origin}/sdk/predict-market-sdk.js
   const sdkUrl = `${resolvedEmbedBaseUrl.replace(/\/embed$/, '')}/sdk/predict-market-sdk.js`;
 
-  // ── Token 刷新 ────────────────────────────────────────────────────────────
-  const refreshToken = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/embed-token?mode=${walletMode ?? 'transfer'}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (!res.ok) throw new Error('Token refresh failed');
-
-      const json = (await res.json()) as { embed_token: string };
-      tokenRef.current = json.embed_token;
-      pmRef.current?.setToken(json.embed_token);
-    } catch (err) {
-      console.error('[EmbedWidget] Token refresh error:', err);
-    }
-  }, [userId, walletMode]);
+  // 預設淺色主題（舊版 SDK 的 theme: 'light' 對應）
+  const DEFAULT_LIGHT_THEME: Partial<PredictMarketTheme> = {
+    backgroundColor: '#FFFFFF',
+    textColor: '#1E293B',
+    primaryColor: '#10B981',
+  };
+  const resolvedTheme = theme ?? DEFAULT_LIGHT_THEME;
 
   // ── Widget 初始化 ─────────────────────────────────────────────────────────
   const initializeWidget = useCallback(() => {
     if (!containerRef.current || !window.PredictMarket) return;
 
     // 清除舊實例
-    pmRef.current?.destroy();
-    containerRef.current.innerHTML = '';
+    widgetRef.current?.destroy();
 
     try {
-      const pm = new window.PredictMarket({
-        embedBaseUrl: resolvedEmbedBaseUrl,
+      const widget = window.PredictMarket.init({
+        container: containerRef.current,
         token: tokenRef.current,
-        locale: 'zh-TW',
-        theme: 'light',
-        onAuthRequired: () => {
-          void refreshToken();
+        route,
+        baseUrl: resolvedEmbedBaseUrl,
+        theme: resolvedTheme,
+        locale,
+        compact,
+        hideHeader,
+        hideFooter,
+        height,
+        width: '100%',
+        onTokenRefresh: async () => {
+          const res = await fetch(`/api/embed-token?mode=${walletMode ?? 'transfer'}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId }),
+          });
+          if (!res.ok) throw new Error('Token refresh failed');
+          const json = (await res.json()) as { embed_token: string };
+          tokenRef.current = json.embed_token;
+          return json.embed_token;
         },
-        onTradeComplete: (data) => {
-          onTradeComplete?.(data);
-        },
-        onError: (data) => {
-          console.error('[EmbedWidget] SDK error:', data);
+        on: {
+          'trade.completed': (data) => {
+            onTradeComplete?.(data as TradeCompletedData);
+          },
+          'resize': () => {
+            // auto-resize 由 SDK 處理
+          },
+          'auth_required': (data) => {
+            console.warn('[EmbedWidget] Auth required:', data);
+          },
+          'error': (data) => {
+            console.error('[EmbedWidget] SDK error:', data);
+          },
         },
       });
 
-      pmRef.current = pm;
-
-      const renderOptions = {
-        height,
-        hide_footer: false,
-        ...(category ? { category } : {}),
-      };
-
-      switch (effectiveMode) {
-        case 'markets':
-          pm.renderMarketList(containerRef.current, renderOptions);
-          break;
-        case 'trade':
-          if (marketId) {
-            pm.renderTradePanel(containerRef.current, marketId, renderOptions);
-          }
-          break;
-        case 'portfolio':
-          pm.renderPortfolio(containerRef.current, renderOptions);
-          break;
-        case 'feed':
-          pm.renderFeed(containerRef.current, renderOptions);
-          break;
-      }
-
+      widgetRef.current = widget;
       setStatus('ready');
     } catch (err) {
       console.error('[EmbedWidget] Init error:', err);
       setErrorMessage('載入市場元件時發生錯誤');
       setStatus('error');
     }
-  }, [resolvedEmbedBaseUrl, effectiveMode, marketId, height, category, onTradeComplete, refreshToken]);
+  }, [resolvedEmbedBaseUrl, route, height, compact, hideHeader, hideFooter, theme, locale, onTradeComplete, userId, walletMode]);
+
+  // ── 主題動態更新 ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (theme && widgetRef.current) {
+      widgetRef.current.setTheme(theme);
+    }
+  }, [theme]);
 
   // ── SDK 載入與 Widget 初始化 ───────────────────────────────────────────────
   useEffect(() => {
@@ -172,7 +173,7 @@ export function EmbedWidget({
         cancelled = true;
         existing.removeEventListener('load', mountWidget);
         existing.removeEventListener('error', handleScriptError);
-        pmRef.current?.destroy();
+        widgetRef.current?.destroy();
       };
     }
 
@@ -185,7 +186,7 @@ export function EmbedWidget({
 
     return () => {
       cancelled = true;
-      pmRef.current?.destroy();
+      widgetRef.current?.destroy();
     };
   }, [sdkUrl, initializeWidget, initialToken, userId]);
 

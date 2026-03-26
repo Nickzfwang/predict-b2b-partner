@@ -2,7 +2,7 @@
 
 ## 串接文件位置
 
-所有 API 規格參考 `../predict-markets/docs/partner-integration/`：
+所有 API 規格參考 `../PredictMarket/docs/partner-integration/`：
 
 | 文件 | 說明 |
 |------|------|

@@ -2,7 +2,7 @@
 
 ## 專案定位
 
-這是一個模擬「財經新聞媒體平台」串接 [predict-markets](../predict-markets) B2B API 的 Demo 產品。
+這是一個模擬「財經新聞媒體平台」串接 [PredictMarket](../PredictMarket) B2B API 的 Demo 產品。
 用來展示 Partner 如何透過 REST API、iframe Embed、JavaScript SDK 將預測市場整合進自己的產品。
 
 ## Tech Stack
@@ -90,7 +90,7 @@ npx tsc --noEmit  # TypeScript 型別檢查
 
 - **Base URL**: `PM_BASE_URL/api/v1/b2b`
 - **認證**: API Key + HMAC-SHA256（見 `lib/predict-markets.ts`）
-- **文件**: `../predict-markets/docs/partner-integration/`
+- **文件**: `../PredictMarket/docs/partner-integration/`
 
 ## 語言偏好
 

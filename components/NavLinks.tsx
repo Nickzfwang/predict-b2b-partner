@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/portfolio', label: '我的投資組合' },
   { href: '/deposit', label: '保證金' },
   { href: '/reconciliation', label: '對帳報告' },
+  { href: '/branding', label: '品牌設定' },
 ];
 
 interface NavLinksProps {

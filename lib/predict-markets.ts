@@ -297,6 +297,26 @@ function isPMApiResponse<T>(value: unknown): value is PMApiResponse<T> {
   );
 }
 
+// ─── Branding 型別 ──────────────────────────────────────────────────────────
+
+export interface PMBrandingThemeConfig {
+  primaryColor?: string;
+  secondaryColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  borderRadius?: string;
+  fontFamily?: string;
+  hidePlatformBranding?: boolean;
+}
+
+export interface PMBrandingLogoResponse {
+  logo_url: string;
+}
+
+export interface PMBrandingThemeResponse {
+  theme_config: PMBrandingThemeConfig;
+}
+
 // ─── Credentials ─────────────────────────────────────────────────────────────
 
 export interface PMCredentials {
@@ -410,6 +430,81 @@ async function pmFetch<T>(
   }
 
   throw new Error('[PM API] Unknown error');
+}
+
+// ─── Multipart HTTP Client ────────────────────────────────────────────────────
+
+/**
+ * 用於 multipart/form-data 請求（如 logo 上傳）。
+ * HMAC body hash 使用 SHA256('') — 空字串，因為 multipart boundary 不可預測。
+ */
+async function pmFetchMultipart<T>(
+  credentials: PMCredentials,
+  method: string,
+  endpoint: string,
+  formData: FormData,
+): Promise<PMApiResponse<T>> {
+  const { apiKey, apiSecret, baseUrl } = credentials;
+
+  if (!apiKey) throw new Error('PM API Key is not set. Check your .env.local credentials.');
+  if (!apiSecret) throw new Error('PM API Secret is not set. Check your .env.local credentials.');
+  if (!baseUrl) throw new Error('PM Base URL is not set. Check your .env.local credentials.');
+
+  const path = `/api/v1/b2b${endpoint}`;
+  // multipart 請求使用空字串做 body hash
+  const { timestamp, signature } = buildSignature(apiSecret, method, path, '');
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      'X-API-Key': apiKey,
+      'X-Timestamp': timestamp,
+      'X-Signature': signature,
+      'Accept': 'application/json',
+      // 不設定 Content-Type，讓 fetch 自動設定 multipart boundary
+    },
+    body: formData,
+    cache: 'no-store',
+  });
+
+  const rawText = await response.text();
+  let parsed: unknown = {};
+
+  if (rawText) {
+    try {
+      parsed = JSON.parse(rawText) as unknown;
+    } catch {
+      parsed = { message: rawText };
+    }
+  }
+
+  if (isPMApiResponse<T>(parsed)) {
+    return parsed;
+  }
+
+  if (response.ok && isObjectRecord(parsed) && !('success' in parsed)) {
+    return {
+      success: true,
+      data: ('data' in parsed ? parsed.data : parsed) as T,
+      meta: { request_id: '', timestamp: new Date().toISOString() },
+    };
+  }
+
+  let code = `HTTP_${response.status}`;
+  let message = response.statusText || 'Request failed';
+
+  if (isObjectRecord(parsed)) {
+    if (isObjectRecord(parsed.error)) {
+      const apiCode = parsed.error.code;
+      const apiMessage = parsed.error.message;
+      if (typeof apiCode === 'string' && apiCode) code = apiCode;
+      if (typeof apiMessage === 'string' && apiMessage) message = apiMessage;
+    } else if (typeof parsed.message === 'string' && parsed.message) {
+      message = parsed.message;
+    }
+  }
+
+  throw new Error(`[PM API] ${code}: ${message}`);
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -566,6 +661,18 @@ export function createPMClient(credentials: PMCredentials) {
     /** 取得 T+1 日對帳報告 */
     getReconciliationReport(date: string) {
       return pmFetch<PMReconciliationReport>(c, 'GET', `/reconciliation/${date}`);
+    },
+
+    // ── Branding API ────────────────────────────────────────────────────
+
+    /** 上傳品牌 Logo（multipart/form-data） */
+    uploadBrandingLogo(formData: FormData) {
+      return pmFetchMultipart<PMBrandingLogoResponse>(c, 'POST', '/branding/logo', formData);
+    },
+
+    /** 更新品牌主題設定（partial merge） */
+    updateBrandingTheme(payload: Record<string, unknown>) {
+      return pmFetch<PMBrandingThemeResponse>(c, 'PUT', '/branding/theme', payload);
     },
   };
 }
