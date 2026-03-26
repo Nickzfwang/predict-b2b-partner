@@ -1,0 +1,24 @@
+# Build output
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Environment secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
