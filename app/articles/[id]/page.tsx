@@ -5,7 +5,7 @@ import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { getArticleById } from '@/data/articles';
 import { EmbedWidget } from '@/components/EmbedWidget';
-import { getDictionary } from '@/lib/i18n';
+import { getDictionary, resolveLocale } from '@/lib/i18n';
 
 interface ArticlePageProps {
   params: Promise<{ id: string }>;
@@ -32,7 +32,8 @@ async function getEmbedToken(userId: string, walletMode: WalletMode) {
 
 export default async function ArticlePage({ params, searchParams }: ArticlePageProps) {
   const { id } = await params;
-  const { user = 'alice', mode: modeParam, locale } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale: localeParam } = await searchParams;
+  const locale = resolveLocale(localeParam);
   const d = getDictionary(locale);
   const walletMode = resolveWalletMode(modeParam);
 

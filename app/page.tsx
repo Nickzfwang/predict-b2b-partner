@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
-import { getDictionary, t } from '@/lib/i18n';
+import { getDictionary, resolveLocale, t } from '@/lib/i18n';
 import { ARTICLES } from '@/data/articles';
 import { ArticleCard } from '@/components/ArticleCard';
 import { EmbedWidget } from '@/components/EmbedWidget';
@@ -100,7 +100,8 @@ async function getEmbedData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const { user = 'alice', mode: modeParam, locale } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale: localeParam } = await searchParams;
+  const locale = resolveLocale(localeParam);
   const walletMode = resolveWalletMode(modeParam);
   const displayName = user.charAt(0).toUpperCase() + user.slice(1);
   const d = getDictionary(locale);

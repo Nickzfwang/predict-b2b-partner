@@ -1,7 +1,7 @@
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { BrandingSettings } from '@/components/BrandingSettings';
-import { getDictionary } from '@/lib/i18n';
+import { getDictionary, resolveLocale } from '@/lib/i18n';
 
 interface BrandingPageProps {
   searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
@@ -34,7 +34,8 @@ async function getEmbedData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function BrandingPage({ searchParams }: BrandingPageProps) {
-  const { user = 'alice', mode: modeParam, locale } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale: localeParam } = await searchParams;
+  const locale = resolveLocale(localeParam);
   const d = getDictionary(locale);
   const walletMode = resolveWalletMode(modeParam);
   const embedData = await getEmbedData(user, walletMode);
