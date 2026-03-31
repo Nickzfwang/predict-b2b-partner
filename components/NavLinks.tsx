@@ -21,6 +21,7 @@ export function NavLinks({ mobile = false }: NavLinksProps) {
   const searchParams = useSearchParams();
   const user = searchParams.get('user');
   const mode = searchParams.get('mode');
+  const locale = searchParams.get('locale');
 
   const navClassName = mobile
     ? 'flex items-center gap-1.5 overflow-x-auto px-1 py-1.5 text-sm font-medium text-slate-700 sm:hidden'
@@ -35,6 +36,7 @@ export function NavLinks({ mobile = false }: NavLinksProps) {
         const params = new URLSearchParams();
         if (user) params.set('user', user);
         if (mode) params.set('mode', mode);
+        if (locale) params.set('locale', locale);
         const qs = params.toString();
         const href = qs ? `${item.href}?${qs}` : item.href;
         return (

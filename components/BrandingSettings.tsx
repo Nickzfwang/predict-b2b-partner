@@ -10,6 +10,7 @@ interface BrandingSettingsProps {
   embedBaseUrl: string;
   initialToken: string;
   userId: string;
+  locale?: string;
   walletMode: string;
 }
 
@@ -37,6 +38,7 @@ export function BrandingSettings({
   embedBaseUrl,
   initialToken,
   userId,
+  locale,
   walletMode,
 }: BrandingSettingsProps) {
   const [themeForm, setThemeForm] = useState<ThemeFormState>(DEFAULT_THEME);
@@ -261,6 +263,7 @@ export function BrandingSettings({
             height="500px"
             compact
             theme={sdkTheme}
+            locale={locale}
             walletMode={walletMode}
           />
         </div>

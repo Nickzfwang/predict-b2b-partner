@@ -3,7 +3,7 @@ import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-
 import { BrandingSettings } from '@/components/BrandingSettings';
 
 interface BrandingPageProps {
-  searchParams: Promise<{ user?: string; mode?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
 }
 
 async function getEmbedData(userId: string, walletMode: WalletMode) {
@@ -33,7 +33,7 @@ async function getEmbedData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function BrandingPage({ searchParams }: BrandingPageProps) {
-  const { user = 'alice', mode: modeParam } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale } = await searchParams;
   const walletMode = resolveWalletMode(modeParam);
   const embedData = await getEmbedData(user, walletMode);
 
@@ -54,6 +54,7 @@ export default async function BrandingPage({ searchParams }: BrandingPageProps) 
           embedBaseUrl={embedBaseUrl}
           initialToken={embedData.token}
           userId={user}
+          locale={locale}
           walletMode={walletMode}
         />
       ) : (

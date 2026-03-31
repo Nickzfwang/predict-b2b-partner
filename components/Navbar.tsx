@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { UserSwitcher } from './UserSwitcher';
 import { ModeSwitcher } from './ModeSwitcher';
+import { LocaleSwitcher } from './LocaleSwitcher';
 import { NavLinks } from './NavLinks';
 import { WebhookNotifications } from './WebhookNotifications';
 import { MobileNavDrawer } from './MobileNavDrawer';
@@ -37,6 +38,12 @@ export function Navbar() {
             <Suspense fallback={<div className="h-10 w-10 rounded-full border border-slate-300 bg-white" />}>
               <WebhookNotifications />
             </Suspense>
+
+            <div className="hidden sm:block">
+              <Suspense>
+                <LocaleSwitcher />
+              </Suspense>
+            </div>
 
             <div className="hidden sm:block">
               <Suspense>

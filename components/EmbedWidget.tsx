@@ -39,6 +39,13 @@ export interface EmbedWidgetProps {
   className?: string;
 }
 
+// 預設淺色主題（舊版 SDK 的 theme: 'light' 對應）
+const DEFAULT_LIGHT_THEME: Partial<PredictMarketTheme> = {
+  backgroundColor: '#FFFFFF',
+  textColor: '#1E293B',
+  primaryColor: '#10B981',
+};
+
 // ─── 元件 ─────────────────────────────────────────────────────────────────────
 
 export function EmbedWidget({
@@ -51,7 +58,7 @@ export function EmbedWidget({
   hideHeader,
   hideFooter,
   theme,
-  locale = 'zh-TW',
+  locale,
   onTradeComplete,
   walletMode,
   className = '',
@@ -69,12 +76,6 @@ export function EmbedWidget({
   // SDK script URL：{origin}/sdk/predict-market-sdk.js
   const sdkUrl = `${resolvedEmbedBaseUrl.replace(/\/embed$/, '')}/sdk/predict-market-sdk.js`;
 
-  // 預設淺色主題（舊版 SDK 的 theme: 'light' 對應）
-  const DEFAULT_LIGHT_THEME: Partial<PredictMarketTheme> = {
-    backgroundColor: '#FFFFFF',
-    textColor: '#1E293B',
-    primaryColor: '#10B981',
-  };
   const resolvedTheme = theme ?? DEFAULT_LIGHT_THEME;
 
   // ── Widget 初始化 ─────────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ export function EmbedWidget({
       setErrorMessage('載入市場元件時發生錯誤');
       setStatus('error');
     }
-  }, [resolvedEmbedBaseUrl, route, height, compact, hideHeader, hideFooter, theme, locale, onTradeComplete, userId, walletMode]);
+  }, [resolvedEmbedBaseUrl, route, height, compact, hideHeader, hideFooter, resolvedTheme, locale, onTradeComplete, userId, walletMode]);
 
   // ── 主題動態更新 ──────────────────────────────────────────────────────────
   useEffect(() => {

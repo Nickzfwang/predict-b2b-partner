@@ -8,7 +8,7 @@ import { EmbedWidget } from '@/components/EmbedWidget';
 
 interface ArticlePageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ user?: string; mode?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
 }
 
 async function getEmbedToken(userId: string, walletMode: WalletMode) {
@@ -31,7 +31,7 @@ async function getEmbedToken(userId: string, walletMode: WalletMode) {
 
 export default async function ArticlePage({ params, searchParams }: ArticlePageProps) {
   const { id } = await params;
-  const { user = 'alice', mode: modeParam } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale } = await searchParams;
   const walletMode = resolveWalletMode(modeParam);
 
   const article = getArticleById(id);
@@ -129,6 +129,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
             userId={user}
             route={article.relatedMarketId ? `/markets/${article.relatedMarketId}` : '/markets'}
             height="520px"
+            locale={locale}
             walletMode={walletMode}
           />
         ) : (

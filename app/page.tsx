@@ -6,7 +6,7 @@ import { ArticleCard } from '@/components/ArticleCard';
 import { EmbedWidget } from '@/components/EmbedWidget';
 
 interface HomePageProps {
-  searchParams: Promise<{ user?: string; mode?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
 }
 
 const MARKET_SNAPSHOT = [
@@ -111,7 +111,7 @@ async function getEmbedData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const { user = 'alice', mode: modeParam } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale } = await searchParams;
   const walletMode = resolveWalletMode(modeParam);
   const displayName = user.charAt(0).toUpperCase() + user.slice(1);
   const embedData = await getEmbedData(user, walletMode);
@@ -211,6 +211,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 userId={user}
                 route="/markets"
                 height="620px"
+                locale={locale}
                 walletMode={walletMode}
               />
             </Suspense>
