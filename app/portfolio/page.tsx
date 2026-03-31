@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
+import { getDictionary, getIntlLocale, resolveLocale, t } from '@/lib/i18n';
+import type { Dictionary } from '@/lib/i18n';
 
 interface PortfolioPageProps {
-  searchParams: Promise<{ user?: string; mode?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
 }
 
 interface PositionView {
@@ -113,6 +115,14 @@ function normalizeTrades(value: unknown): TradeView[] {
   });
 }
 
+function formatTradeValue(value: string, d: Dictionary): string {
+  if (value === 'buy') return d.trades.buy;
+  if (value === 'sell') return d.trades.sell;
+  if (value === 'yes') return d.common.yes;
+  if (value === 'no') return d.common.no;
+  return value;
+}
+
 async function getPortfolioData(userId: string, walletMode: WalletMode) {
   try {
     const pmClient = getPMClient(walletMode);
@@ -202,16 +212,26 @@ async function getPortfolioData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function PortfolioPage({ searchParams }: PortfolioPageProps) {
-  const { user = 'alice', mode: modeParam } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale: localeParam } = await searchParams;
+  const locale = resolveLocale(localeParam);
+  const d = getDictionary(locale);
+  const intlLocale = getIntlLocale(locale);
   const walletMode = resolveWalletMode(modeParam);
   const data = await getPortfolioData(user, walletMode);
+  const trades = (data?.trades ?? []).map((trade) => {
+    const [type, outcome] = trade.side.split(' / ');
+    return {
+      ...trade,
+      side: `${formatTradeValue(type, d)} / ${formatTradeValue(outcome, d)}`,
+    };
+  });
 
   const displayName = user.charAt(0).toUpperCase() + user.slice(1);
   const balance = typeof data?.user?.balance === 'number' ? data.user.balance : 0;
-  const totalTrades = typeof data?.user?.total_trades === 'number' ? data.user.total_trades : data?.trades.length ?? 0;
+  const totalTrades = typeof data?.user?.total_trades === 'number' ? data.user.total_trades : trades.length;
   const joinedDate = data?.user?.created_at
-    ? new Date(data.user.created_at).toLocaleDateString('zh-TW')
-    : 'N/A';
+    ? new Date(data.user.created_at).toLocaleDateString(intlLocale)
+    : d.common.notAvailable;
 
   const totals = (data?.positions ?? []).reduce(
     (acc, p) => {
@@ -226,31 +246,31 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <section className="demo-hero mb-8 overflow-hidden rounded-2xl border border-slate-800/60 p-6 text-white shadow-lg">
-        <p className="inline-flex rounded-full bg-indigo-300/25 px-3 py-1 text-xs font-medium text-indigo-100">Portfolio API Dashboard</p>
+        <p className="inline-flex rounded-full bg-indigo-300/25 px-3 py-1 text-xs font-medium text-indigo-100">{d.portfolio.badge}</p>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{displayName} 的投資組合</h1>
-            <p className="mt-1 text-sm text-slate-200">以 API 直接查詢持倉、交易與資產摘要</p>
+            <h1 className="text-2xl font-bold">{t(d.portfolio.title, { name: displayName })}</h1>
+            <p className="mt-1 text-sm text-slate-200">{d.portfolio.subtitle}</p>
           </div>
 
           <div className="hero-summary-card w-full rounded-xl px-5 py-3 text-left sm:w-auto sm:text-right">
-            <p className="text-xs text-slate-200">可用餘額</p>
+            <p className="text-xs text-slate-200">{d.portfolio.availableBalance}</p>
             <p className="mt-0.5 text-xl font-bold text-white">
-              ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ${balance.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
       </section>
 
       <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="總交易次數" value={String(totalTrades)} icon="🔄" />
-        <StatCard label="加入時間" value={joinedDate} icon="📅" />
-        <StatCard label="帳號 ID" value={`${getUserPrefix(walletMode)}${user}`} icon="🪪" mono />
-        <StatCard label="總投入" value={`$${totals.invested.toFixed(2)}`} icon="💵" />
-        <StatCard label="持倉市值" value={`$${totals.currentValue.toFixed(2)}`} icon="📈" />
+        <StatCard label={d.portfolio.totalTrades} value={String(totalTrades)} icon="🔄" />
+        <StatCard label={d.portfolio.joinDate} value={joinedDate} icon="📅" />
+        <StatCard label={d.portfolio.accountId} value={`${getUserPrefix(walletMode)}${user}`} icon="🪪" mono />
+        <StatCard label={d.portfolio.totalInvested} value={`$${totals.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon="💵" />
+        <StatCard label={d.portfolio.positionValue} value={`$${totals.currentValue.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon="📈" />
         <StatCard
-          label="未實現損益"
-          value={`$${totals.unrealized.toFixed(2)}`}
+          label={d.portfolio.unrealizedPnl}
+          value={`$${totals.unrealized.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon="📊"
           tone={totals.unrealized >= 0 ? 'positive' : 'negative'}
         />
@@ -258,8 +278,8 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
 
       <section className="table-surface mb-6 p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">📋 持倉明細（API）</h2>
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">即時查詢</span>
+          <h2 className="text-sm font-semibold text-gray-700">📋 {d.portfolio.holdingsApi}</h2>
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">{d.portfolio.realtimeQuery}</span>
         </div>
 
         {data?.positions?.length ? (
@@ -268,15 +288,15 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
               {data.positions.map((p) => (
                 <article key={`position-mobile-${p.id}`} className="mobile-data-card">
                   <p className="text-sm font-semibold text-slate-800">{p.marketTitle}</p>
-                  <p className="mt-1 text-xs capitalize text-slate-500">狀態：{p.marketStatus}</p>
+                  <p className="mt-1 text-xs capitalize text-slate-500">{d.portfolio.status}：{p.marketStatus}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <p>Yes：{p.yesShares}</p>
-                    <p>No：{p.noShares}</p>
-                    <p className="font-semibold text-slate-900">投入：${p.invested.toFixed(2)}</p>
-                    <p className="font-semibold text-slate-900">市值：${p.currentValue.toFixed(2)}</p>
+                    <p>{d.portfolio.yesLabel}：{p.yesShares}</p>
+                    <p>{d.portfolio.noLabel}：{p.noShares}</p>
+                    <p className="font-semibold text-slate-900">{d.portfolio.invested}：${p.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="font-semibold text-slate-900">{d.portfolio.value}：${p.currentValue.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <p className={`mt-2 text-sm ${p.unrealized >= 0 ? 'value-positive' : 'value-negative'}`}>
-                    未實現：${p.unrealized.toFixed(2)}
+                    {d.portfolio.unrealized}：${p.unrealized.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </article>
               ))}
@@ -286,13 +306,13 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="table-head-row text-left text-xs">
-                    <th className="py-2 pr-3">市場</th>
-                    <th className="py-2 pr-3">狀態</th>
-                    <th className="py-2 pr-3">Yes</th>
-                    <th className="py-2 pr-3">No</th>
-                    <th className="py-2 pr-3">投入</th>
-                    <th className="py-2 pr-3">市值</th>
-                    <th className="py-2 pr-3">未實現</th>
+                    <th className="py-2 pr-3">{d.common.market}</th>
+                    <th className="py-2 pr-3">{d.portfolio.status}</th>
+                    <th className="py-2 pr-3">{d.portfolio.yesLabel}</th>
+                    <th className="py-2 pr-3">{d.portfolio.noLabel}</th>
+                    <th className="py-2 pr-3">{d.portfolio.invested}</th>
+                    <th className="py-2 pr-3">{d.portfolio.value}</th>
+                    <th className="py-2 pr-3">{d.portfolio.unrealized}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -302,10 +322,10 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
                       <td className="py-2 pr-3 capitalize">{p.marketStatus}</td>
                       <td className="py-2 pr-3">{p.yesShares}</td>
                       <td className="py-2 pr-3">{p.noShares}</td>
-                      <td className="py-2 pr-3 font-medium text-slate-900">${p.invested.toFixed(2)}</td>
-                      <td className="py-2 pr-3 font-medium text-slate-900">${p.currentValue.toFixed(2)}</td>
+                      <td className="py-2 pr-3 font-medium text-slate-900">${p.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="py-2 pr-3 font-medium text-slate-900">${p.currentValue.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className={`py-2 pr-3 ${p.unrealized >= 0 ? 'value-positive' : 'value-negative'}`}>
-                        ${p.unrealized.toFixed(2)}
+                        ${p.unrealized.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}
@@ -314,28 +334,28 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
             </div>
           </>
         ) : (
-          <p className="text-sm text-gray-500">目前沒有持倉資料。</p>
+          <p className="text-sm text-gray-500">{d.portfolio.noPositions}</p>
         )}
       </section>
 
       <section className="table-surface p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">🧾 最近交易（API）</h2>
-          <Link href={`/trades?user=${user}&mode=${walletMode}`} className="text-xs text-blue-700 hover:underline">前往交易中心</Link>
+          <h2 className="text-sm font-semibold text-gray-700">🧾 {d.portfolio.recentTradesApi}</h2>
+          <Link href={`/trades?user=${user}&mode=${walletMode}&locale=${locale}`} className="text-xs text-blue-700 hover:underline">{d.portfolio.goToTrading}</Link>
         </div>
 
-        {data?.trades?.length ? (
+        {trades.length ? (
           <>
             <div className="space-y-2 sm:hidden">
-              {data.trades.slice(0, 20).map((trade) => (
+              {trades.slice(0, 20).map((trade) => (
                 <article key={`trade-mobile-${trade.id}`} className="mobile-data-card">
-                  <p className="text-xs text-slate-500">{trade.createdAt ? new Date(trade.createdAt).toLocaleString('zh-TW') : 'N/A'}</p>
+                  <p className="text-xs text-slate-500">{trade.createdAt ? new Date(trade.createdAt).toLocaleString(intlLocale) : d.common.notAvailable}</p>
                   <p className="mt-1 font-mono text-xs text-slate-700">{trade.marketLabel}</p>
                   <p className="mt-1 text-sm font-medium uppercase text-slate-800">{trade.side}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <p>股數：{trade.shares}</p>
-                    <p className="text-right font-semibold text-slate-900">金額：${trade.totalAmount.toFixed(2)}</p>
-                    <p className="col-span-2 font-semibold text-slate-900">餘額：${trade.balanceAfter.toFixed(2)}</p>
+                    <p>{d.common.shares}：{trade.shares}</p>
+                    <p className="text-right font-semibold text-slate-900">{d.common.amount}：${trade.totalAmount.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="col-span-2 font-semibold text-slate-900">{d.common.balance}：${trade.balanceAfter.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </article>
               ))}
@@ -345,23 +365,23 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="table-head-row text-left text-xs">
-                    <th className="py-2 pr-3">時間</th>
-                    <th className="py-2 pr-3">市場</th>
-                    <th className="py-2 pr-3">方向</th>
-                    <th className="py-2 pr-3">股數</th>
-                    <th className="py-2 pr-3">金額</th>
-                    <th className="py-2 pr-3">餘額</th>
+                    <th className="py-2 pr-3">{d.common.time}</th>
+                    <th className="py-2 pr-3">{d.common.market}</th>
+                    <th className="py-2 pr-3">{d.portfolio.direction}</th>
+                    <th className="py-2 pr-3">{d.common.shares}</th>
+                    <th className="py-2 pr-3">{d.common.amount}</th>
+                    <th className="py-2 pr-3">{d.common.balance}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.trades.slice(0, 20).map((trade) => (
+                  {trades.slice(0, 20).map((trade) => (
                     <tr key={trade.id} className="table-body-row">
-                      <td className="py-2 pr-3">{trade.createdAt ? new Date(trade.createdAt).toLocaleString('zh-TW') : 'N/A'}</td>
+                      <td className="py-2 pr-3">{trade.createdAt ? new Date(trade.createdAt).toLocaleString(intlLocale) : d.common.notAvailable}</td>
                       <td className="py-2 pr-3 font-mono text-xs">{trade.marketLabel}</td>
                       <td className="py-2 pr-3 uppercase">{trade.side}</td>
                       <td className="py-2 pr-3">{trade.shares}</td>
-                      <td className="py-2 pr-3 font-medium text-slate-900">${trade.totalAmount.toFixed(2)}</td>
-                      <td className="py-2 pr-3 font-medium text-slate-900">${trade.balanceAfter.toFixed(2)}</td>
+                      <td className="py-2 pr-3 font-medium text-slate-900">${trade.totalAmount.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="py-2 pr-3 font-medium text-slate-900">${trade.balanceAfter.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -369,7 +389,7 @@ export default async function PortfolioPage({ searchParams }: PortfolioPageProps
             </div>
           </>
         ) : (
-          <p className="text-sm text-gray-500">目前沒有交易資料。</p>
+          <p className="text-sm text-gray-500">{d.portfolio.noTrades}</p>
         )}
       </section>
     </div>

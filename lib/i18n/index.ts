@@ -29,6 +29,10 @@ export function getDictionary(locale: string | undefined | null): Dictionary {
   return dictionaries[resolveLocale(locale)];
 }
 
+export function getIntlLocale(locale: string | undefined | null): SupportedLocale {
+  return resolveLocale(locale);
+}
+
 /** 簡易模板替換：將 {name} 替換為 params.name */
 export function t(template: string, params?: Record<string, string>): string {
   if (!params) return template;

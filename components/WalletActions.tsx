@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getDictionary } from '@/lib/i18n';
 
 interface WalletActionsProps {
   userId: string;
   onSuccess?: () => void;
   walletMode?: string;
+  locale?: string;
 }
 
-export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsProps) {
+export function WalletActions({ userId, onSuccess, walletMode, locale }: WalletActionsProps) {
   const router = useRouter();
+  const d = getDictionary(locale);
   const [depositAmount, setDepositAmount] = useState('100');
   const [withdrawAmount, setWithdrawAmount] = useState('50');
   const [loadingAction, setLoadingAction] = useState<'deposit' | 'withdraw' | null>(null);
@@ -24,7 +27,7 @@ export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsPr
 
     const amount = Number(amountText);
     if (!Number.isFinite(amount) || amount < 0.01) {
-      setError('金額需大於等於 0.01');
+      setError(d.wallet.amountMinError);
       setLoadingAction(null);
       return;
     }
@@ -43,15 +46,15 @@ export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsPr
       const json = (await res.json()) as { error?: string; code?: string };
 
       if (!res.ok) {
-        setError(json.error ?? `Failed to ${type}`);
+        setError(json.error ?? (type === 'deposit' ? d.wallet.depositFailed : d.wallet.withdrawFailed));
         return;
       }
 
-      setMessage(type === 'deposit' ? '入金成功' : '出金成功');
+      setMessage(type === 'deposit' ? d.wallet.depositSuccess : d.wallet.withdrawSuccess);
       onSuccess?.();
       router.refresh();
     } catch {
-      setError(type === 'deposit' ? '入金失敗' : '出金失敗');
+      setError(type === 'deposit' ? d.wallet.depositFailed : d.wallet.withdrawFailed);
     } finally {
       setLoadingAction(null);
     }
@@ -59,12 +62,12 @@ export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsPr
 
   return (
     <div className="glass-card lift-hover rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-slate-900">資金操作</h2>
-      <p className="mt-1 text-xs text-slate-600">支援 demo 用戶即時入金/出金，適合展示 partner 結算流程。</p>
+      <h2 className="text-base font-semibold text-slate-900">{d.wallet.actionTitle}</h2>
+      <p className="mt-1 text-xs text-slate-600">{d.wallet.actionDesc}</p>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3">
-          <label className="text-xs font-medium text-emerald-700">入金金額</label>
+          <label className="text-xs font-medium text-emerald-700">{d.wallet.depositAmount}</label>
           <input
             type="number"
             min="0.01"
@@ -78,12 +81,12 @@ export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsPr
             disabled={loadingAction !== null}
             className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loadingAction === 'deposit' ? '處理中...' : '確認入金'}
+            {loadingAction === 'deposit' ? d.wallet.processing : d.wallet.confirmDeposit}
           </button>
         </div>
 
         <div className="rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100/50 p-3">
-          <label className="text-xs font-medium text-rose-700">出金金額</label>
+          <label className="text-xs font-medium text-rose-700">{d.wallet.withdrawAmount}</label>
           <input
             type="number"
             min="0.01"
@@ -97,7 +100,7 @@ export function WalletActions({ userId, onSuccess, walletMode }: WalletActionsPr
             disabled={loadingAction !== null}
             className="mt-2 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loadingAction === 'withdraw' ? '處理中...' : '確認出金'}
+            {loadingAction === 'withdraw' ? d.wallet.processing : d.wallet.confirmWithdraw}
           </button>
         </div>
       </div>

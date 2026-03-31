@@ -1,8 +1,9 @@
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
+import { getDictionary, getIntlLocale, resolveLocale } from '@/lib/i18n';
 
 interface PositionsPageProps {
-  searchParams: Promise<{ user?: string; mode?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
 }
 
 interface PositionView {
@@ -146,7 +147,10 @@ async function getPositionsData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function PositionsPage({ searchParams }: PositionsPageProps) {
-  const { user = 'alice', mode: modeParam } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale: localeParam } = await searchParams;
+  const locale = resolveLocale(localeParam);
+  const d = getDictionary(locale);
+  const intlLocale = getIntlLocale(locale);
   const walletMode = resolveWalletMode(modeParam);
   const positions = await getPositionsData(user, walletMode);
 
@@ -164,13 +168,13 @@ export default async function PositionsPage({ searchParams }: PositionsPageProps
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">持倉總覽</h1>
-          <p className="mt-1 text-sm text-slate-500">追蹤目前持倉與未實現損益</p>
+          <h1 className="text-2xl font-bold text-slate-900">{d.portfolio.holdingsApi}</h1>
+          <p className="mt-1 text-sm text-slate-500">{d.portfolio.subtitle}</p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-right text-xs sm:text-sm">
-          <Metric label="投入" value={totals.invested} />
-          <Metric label="市值" value={totals.currentValue} />
-          <Metric label="未實現" value={totals.unrealized} highlight />
+          <Metric label={d.portfolio.invested} value={totals.invested} highlight={false} locale={intlLocale} />
+          <Metric label={d.portfolio.value} value={totals.currentValue} highlight={false} locale={intlLocale} />
+          <Metric label={d.portfolio.unrealized} value={totals.unrealized} highlight locale={intlLocale} />
         </div>
       </div>
 
@@ -180,13 +184,13 @@ export default async function PositionsPage({ searchParams }: PositionsPageProps
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
-                  <th className="py-2 pr-3">市場</th>
-                  <th className="py-2 pr-3">狀態</th>
-                  <th className="py-2 pr-3">Yes</th>
-                  <th className="py-2 pr-3">No</th>
-                  <th className="py-2 pr-3">投入</th>
-                  <th className="py-2 pr-3">市值</th>
-                  <th className="py-2 pr-3">未實現</th>
+                  <th className="py-2 pr-3">{d.common.market}</th>
+                  <th className="py-2 pr-3">{d.portfolio.status}</th>
+                  <th className="py-2 pr-3">{d.portfolio.yesLabel}</th>
+                  <th className="py-2 pr-3">{d.portfolio.noLabel}</th>
+                  <th className="py-2 pr-3">{d.portfolio.invested}</th>
+                  <th className="py-2 pr-3">{d.portfolio.value}</th>
+                  <th className="py-2 pr-3">{d.portfolio.unrealized}</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,10 +200,10 @@ export default async function PositionsPage({ searchParams }: PositionsPageProps
                     <td className="py-2 pr-3 capitalize">{p.marketStatus}</td>
                     <td className="py-2 pr-3">{p.yesShares}</td>
                     <td className="py-2 pr-3">{p.noShares}</td>
-                    <td className="py-2 pr-3">${p.invested.toFixed(2)}</td>
-                    <td className="py-2 pr-3">${p.currentValue.toFixed(2)}</td>
+                    <td className="py-2 pr-3">${p.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="py-2 pr-3">${p.currentValue.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className={`py-2 pr-3 ${p.unrealized >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      ${p.unrealized.toFixed(2)}
+                      ${p.unrealized.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
@@ -207,19 +211,19 @@ export default async function PositionsPage({ searchParams }: PositionsPageProps
             </table>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">目前沒有持倉資料。</p>
+          <p className="text-sm text-slate-500">{d.portfolio.noPositions}</p>
         )}
       </section>
     </div>
   );
 }
 
-function Metric({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
+function Metric({ label, value, highlight = false, locale }: { label: string; value: number; highlight?: boolean; locale: string }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
       <p className="text-[11px] text-slate-400">{label}</p>
       <p className={`font-semibold ${highlight ? (value >= 0 ? 'text-emerald-700' : 'text-rose-700') : 'text-slate-800'}`}>
-        ${value.toFixed(2)}
+        ${value.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
     </div>
   );

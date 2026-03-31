@@ -7,6 +7,7 @@ import type {
   PMDepositTransaction,
   PMDepositTransactionType,
 } from '@/lib/predict-markets';
+import { getDictionary, getIntlLocale, t } from '@/lib/i18n';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -14,6 +15,7 @@ interface DepositDashboardProps {
   account: PMDepositAccount;
   risk: PMDepositRisk;
   walletMode: string;
+  locale?: string;
 }
 
 interface TransactionFilters {
@@ -31,17 +33,6 @@ interface PaginationMeta {
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-
-const TRANSACTION_TYPES: { value: PMDepositTransactionType; label: string }[] = [
-  { value: 'deposit', label: '充值' },
-  { value: 'withdrawal', label: '提領' },
-  { value: 'freeze', label: '凍結' },
-  { value: 'unfreeze', label: '解凍' },
-  { value: 'settlement_debit', label: '結算扣款' },
-  { value: 'settlement_credit', label: '結算入帳' },
-  { value: 'fee_debit', label: '手續費扣款' },
-  { value: 'revenue_credit', label: '分潤入帳' },
-];
 
 const RISK_LEVEL_CONFIG = {
   normal: { label: '正常', color: 'bg-emerald-100 text-emerald-800', dot: 'bg-emerald-500' },
@@ -61,28 +52,19 @@ const TXN_TYPE_BADGE: Record<PMDepositTransactionType, string> = {
   revenue_credit: 'bg-teal-100 text-teal-700',
 };
 
-const TXN_TYPE_LABEL: Record<PMDepositTransactionType, string> = {
-  deposit: '充值',
-  withdrawal: '提領',
-  freeze: '凍結',
-  unfreeze: '解凍',
-  settlement_debit: '結算扣款',
-  settlement_credit: '結算入帳',
-  fee_debit: '手續費',
-  revenue_credit: '分潤',
-};
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatAmount(val: string): string {
+function formatAmount(val: string, locale: string): string {
   const n = parseFloat(val);
   if (isNaN(n)) return val;
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2 });
+  return n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function DepositDashboard({ account, risk, walletMode }: DepositDashboardProps) {
+export function DepositDashboard({ account, risk, walletMode, locale }: DepositDashboardProps) {
+  const d = getDictionary(locale);
+  const intlLocale = getIntlLocale(locale);
   const [transactions, setTransactions] = useState<PMDepositTransaction[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -123,42 +105,68 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
     fetchTransactions();
   }, [fetchTransactions]);
 
+  const riskLabelMap = {
+    normal: d.deposit.riskNormal,
+    yellow: d.deposit.riskWarning,
+    orange: d.deposit.riskDanger,
+    red: d.deposit.riskCritical,
+  } as const;
   const riskConfig = RISK_LEVEL_CONFIG[risk.risk_alert_level] ?? RISK_LEVEL_CONFIG.normal;
+  const transactionTypeLabels: Record<PMDepositTransactionType, string> = {
+    deposit: d.deposit.typeDeposit,
+    withdrawal: d.deposit.typeWithdrawal,
+    freeze: d.deposit.typeFreeze,
+    unfreeze: d.deposit.typeUnfreeze,
+    settlement_debit: d.deposit.typeSettlementDebit,
+    settlement_credit: d.deposit.typeSettlementCredit,
+    fee_debit: d.deposit.typeFeeDebit,
+    revenue_credit: d.deposit.typeRevenueCredit,
+  };
+  const transactionTypes: { value: PMDepositTransactionType; label: string }[] = [
+    { value: 'deposit', label: d.deposit.typeDeposit },
+    { value: 'withdrawal', label: d.deposit.typeWithdrawal },
+    { value: 'freeze', label: d.deposit.typeFreeze },
+    { value: 'unfreeze', label: d.deposit.typeUnfreeze },
+    { value: 'settlement_debit', label: d.deposit.typeSettlementDebit },
+    { value: 'settlement_credit', label: d.deposit.typeSettlementCredit },
+    { value: 'fee_debit', label: d.deposit.typeFeeDebit },
+    { value: 'revenue_credit', label: d.deposit.typeRevenueCredit },
+  ];
 
   return (
     <div className="space-y-6">
       {/* ── Account Summary ─────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="累計存入" value={`$${formatAmount(account.total_deposit)}`} />
-        <SummaryCard label="可用餘額" value={`$${formatAmount(account.available_balance)}`} highlight />
-        <SummaryCard label="凍結金額" value={`$${formatAmount(account.frozen_balance)}`} />
-        <SummaryCard label="待付手續費 / 待收分潤" value={`$${formatAmount(account.fee_payable)} / $${formatAmount(account.revenue_receivable)}`} />
+        <SummaryCard label={d.deposit.totalDeposit} value={`$${formatAmount(account.total_deposit, intlLocale)}`} />
+        <SummaryCard label={d.deposit.availableBalance} value={`$${formatAmount(account.available_balance, intlLocale)}`} highlight />
+        <SummaryCard label={d.deposit.frozenBalance} value={`$${formatAmount(account.frozen_balance, intlLocale)}`} />
+        <SummaryCard label={d.deposit.feePayableRevenueReceivable} value={`$${formatAmount(account.fee_payable, intlLocale)} / $${formatAmount(account.revenue_receivable, intlLocale)}`} />
       </div>
 
       {/* ── Risk Status ─────────────────────────────────────── */}
       <section className="table-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">風控狀態</h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">{d.deposit.riskStatus}</h2>
         <div className="flex flex-wrap items-center gap-4">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${riskConfig.color}`}>
             <span className={`inline-block h-2 w-2 rounded-full ${riskConfig.dot}`} />
-            {riskConfig.label}
+            {riskLabelMap[risk.risk_alert_level] ?? d.deposit.riskNormal}
           </span>
 
           <div className="flex items-center gap-4 text-sm text-slate-600">
             <span>
-              風險比率：
+              {d.deposit.riskRatio}：
               <strong className="text-slate-900">
                 {risk.risk_ratio !== null ? `${(risk.risk_ratio * 100).toFixed(1)}%` : 'N/A'}
               </strong>
             </span>
             <span>
-              敞口：<strong className="text-slate-900">${formatAmount(risk.current_exposure)}</strong>
+              {d.deposit.exposure}：<strong className="text-slate-900">${formatAmount(risk.current_exposure, intlLocale)}</strong>
             </span>
           </div>
 
           {risk.trading_restricted && (
             <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">
-              新開倉已限制
+              {d.deposit.tradingRestricted}
             </span>
           )}
         </div>
@@ -166,44 +174,44 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
         {risk.active_alert && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <p className="font-medium">
-              活躍警報 — {RISK_LEVEL_CONFIG[risk.active_alert.alert_level]?.label ?? risk.active_alert.alert_level}
+              {d.deposit.activeAlert} - {riskLabelMap[risk.active_alert.alert_level] ?? risk.active_alert.alert_level}
             </p>
             <p className="mt-1 text-xs text-amber-600">
-              觸發時間：{new Date(risk.active_alert.triggered_at).toLocaleString('zh-TW')}
+              {d.deposit.triggeredAt}：{new Date(risk.active_alert.triggered_at).toLocaleString(intlLocale)}
               {' | '}
-              採取動作：{risk.active_alert.action_taken}
+              {d.deposit.actionTaken}：{risk.active_alert.action_taken}
             </p>
           </div>
         )}
 
         {risk.last_check_at && (
           <p className="mt-2 text-xs text-slate-400">
-            最後檢查：{new Date(risk.last_check_at).toLocaleString('zh-TW')}
+            {d.deposit.lastCheckAt}：{new Date(risk.last_check_at).toLocaleString(intlLocale)}
           </p>
         )}
       </section>
 
       {/* ── Transaction Filters ─────────────────────────────── */}
       <section className="table-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">保證金交易記錄</h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">{d.deposit.transactionRecords}</h2>
 
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <label className="text-xs text-slate-600">
-            類型
+            {d.deposit.filterType}
             <select
               className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 sm:w-40"
               value={filters.type}
               onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value as PMDepositTransactionType | '', page: 1 }))}
             >
-              <option value="">全部</option>
-              {TRANSACTION_TYPES.map((t) => (
+              <option value="">{d.deposit.allTypes}</option>
+              {transactionTypes.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </label>
 
           <label className="text-xs text-slate-600">
-            起始日期
+            {d.deposit.fromDate}
             <input
               type="date"
               className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 sm:w-40"
@@ -213,7 +221,7 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
           </label>
 
           <label className="text-xs text-slate-600">
-            結束日期
+            {d.deposit.toDate}
             <input
               type="date"
               className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 sm:w-40"
@@ -225,27 +233,27 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
 
         {/* ── Mobile Cards ─────────────────────────────────── */}
         <div className="space-y-2 sm:hidden">
-          {loading && <p className="py-4 text-center text-sm text-slate-400">載入中...</p>}
+          {loading && <p className="py-4 text-center text-sm text-slate-400">{d.common.loading}</p>}
           {!loading && transactions.length === 0 && (
-            <p className="py-4 text-center text-sm text-slate-500">目前無交易記錄。</p>
+            <p className="py-4 text-center text-sm text-slate-500">{d.deposit.noTransactions}</p>
           )}
           {!loading &&
             transactions.map((txn) => (
               <article key={txn.id} className="mobile-data-card">
                 <div className="flex items-center justify-between">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TXN_TYPE_BADGE[txn.type]}`}>
-                    {TXN_TYPE_LABEL[txn.type]}
+                    {transactionTypeLabels[txn.type]}
                   </span>
                   <span className="text-xs text-slate-500">
-                    {new Date(txn.created_at).toLocaleString('zh-TW')}
+                    {new Date(txn.created_at).toLocaleString(intlLocale)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm font-semibold text-slate-900">${formatAmount(txn.amount)}</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">${formatAmount(txn.amount, intlLocale)}</p>
                 <div className="mt-1 grid grid-cols-2 gap-1 text-xs text-slate-500">
-                  <span>餘額前：${formatAmount(txn.balance_before)}</span>
-                  <span className="text-right">餘額後：${formatAmount(txn.balance_after)}</span>
-                  <span>凍結前：${formatAmount(txn.frozen_before)}</span>
-                  <span className="text-right">凍結後：${formatAmount(txn.frozen_after)}</span>
+                  <span>{d.deposit.beforeBalance}：${formatAmount(txn.balance_before, intlLocale)}</span>
+                  <span className="text-right">{d.deposit.afterBalance}：${formatAmount(txn.balance_after, intlLocale)}</span>
+                  <span>{d.deposit.beforeFrozen}：${formatAmount(txn.frozen_before, intlLocale)}</span>
+                  <span className="text-right">{d.deposit.afterFrozen}：${formatAmount(txn.frozen_after, intlLocale)}</span>
                 </div>
                 {txn.note && <p className="mt-1 text-xs text-slate-400">{txn.note}</p>}
               </article>
@@ -254,38 +262,38 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
 
         {/* ── Desktop Table ────────────────────────────────── */}
         <div className="hidden overflow-x-auto sm:block">
-          {loading && <p className="py-4 text-center text-sm text-slate-400">載入中...</p>}
+          {loading && <p className="py-4 text-center text-sm text-slate-400">{d.common.loading}</p>}
           {!loading && transactions.length === 0 && (
-            <p className="py-4 text-center text-sm text-slate-500">目前無交易記錄。</p>
+            <p className="py-4 text-center text-sm text-slate-500">{d.deposit.noTransactions}</p>
           )}
           {!loading && transactions.length > 0 && (
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="table-head-row text-left text-xs">
-                  <th className="py-2 pr-3">時間</th>
-                  <th className="py-2 pr-3">類型</th>
-                  <th className="py-2 pr-3">金額</th>
-                  <th className="py-2 pr-3">餘額前</th>
-                  <th className="py-2 pr-3">餘額後</th>
-                  <th className="py-2 pr-3">凍結前</th>
-                  <th className="py-2 pr-3">凍結後</th>
-                  <th className="py-2 pr-3">備註</th>
+                  <th className="py-2 pr-3">{d.common.time}</th>
+                  <th className="py-2 pr-3">{d.deposit.filterType}</th>
+                  <th className="py-2 pr-3">{d.common.amount}</th>
+                  <th className="py-2 pr-3">{d.deposit.beforeBalance}</th>
+                  <th className="py-2 pr-3">{d.deposit.afterBalance}</th>
+                  <th className="py-2 pr-3">{d.deposit.beforeFrozen}</th>
+                  <th className="py-2 pr-3">{d.deposit.afterFrozen}</th>
+                  <th className="py-2 pr-3">{d.deposit.note}</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((txn) => (
                   <tr key={txn.id} className="table-body-row">
-                    <td className="whitespace-nowrap py-2 pr-3">{new Date(txn.created_at).toLocaleString('zh-TW')}</td>
+                    <td className="whitespace-nowrap py-2 pr-3">{new Date(txn.created_at).toLocaleString(intlLocale)}</td>
                     <td className="py-2 pr-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TXN_TYPE_BADGE[txn.type]}`}>
-                        {TXN_TYPE_LABEL[txn.type]}
+                        {transactionTypeLabels[txn.type]}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 font-medium text-slate-900">${formatAmount(txn.amount)}</td>
-                    <td className="py-2 pr-3">${formatAmount(txn.balance_before)}</td>
-                    <td className="py-2 pr-3">${formatAmount(txn.balance_after)}</td>
-                    <td className="py-2 pr-3">${formatAmount(txn.frozen_before)}</td>
-                    <td className="py-2 pr-3">${formatAmount(txn.frozen_after)}</td>
+                    <td className="py-2 pr-3 font-medium text-slate-900">${formatAmount(txn.amount, intlLocale)}</td>
+                    <td className="py-2 pr-3">${formatAmount(txn.balance_before, intlLocale)}</td>
+                    <td className="py-2 pr-3">${formatAmount(txn.balance_after, intlLocale)}</td>
+                    <td className="py-2 pr-3">${formatAmount(txn.frozen_before, intlLocale)}</td>
+                    <td className="py-2 pr-3">${formatAmount(txn.frozen_after, intlLocale)}</td>
                     <td className="py-2 pr-3 text-xs text-slate-500">{txn.note ?? '-'}</td>
                   </tr>
                 ))}
@@ -298,7 +306,11 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
         {pagination && pagination.last_page > 1 && (
           <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
             <span>
-              第 {pagination.current_page} / {pagination.last_page} 頁（共 {pagination.total} 筆）
+              {t(d.deposit.pageStatus, {
+                current: String(pagination.current_page),
+                last: String(pagination.last_page),
+                total: String(pagination.total),
+              })}
             </span>
             <div className="flex gap-2">
               <button
@@ -306,14 +318,14 @@ export function DepositDashboard({ account, risk, walletMode }: DepositDashboard
                 className="rounded border border-slate-300 px-3 py-1 text-xs disabled:opacity-40"
                 onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
               >
-                上一頁
+                {d.deposit.previousPage}
               </button>
               <button
                 disabled={pagination.current_page >= pagination.last_page}
                 className="rounded border border-slate-300 px-3 py-1 text-xs disabled:opacity-40"
                 onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
               >
-                下一頁
+                {d.deposit.nextPage}
               </button>
             </div>
           </div>

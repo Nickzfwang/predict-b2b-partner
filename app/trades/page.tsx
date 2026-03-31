@@ -1,9 +1,11 @@
 import { TradeForm } from '@/components/TradeForm';
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
+import { getDictionary, getIntlLocale, resolveLocale } from '@/lib/i18n';
+import type { Dictionary } from '@/lib/i18n';
 
 interface TradesPageProps {
-  searchParams: Promise<{ user?: string; mode?: string }>;
+  searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
 }
 
 function normalizeTrades(value: unknown): Array<Record<string, unknown>> {
@@ -66,6 +68,14 @@ function buildMarketOptions(
   return [...map.values()];
 }
 
+function getTradeText(value: unknown, d: Dictionary): string {
+  if (value === 'buy') return d.trades.buy;
+  if (value === 'sell') return d.trades.sell;
+  if (value === 'yes') return d.common.yes;
+  if (value === 'no') return d.common.no;
+  return typeof value === 'string' ? value : d.common.notAvailable;
+}
+
 async function getTradesData(userId: string, walletMode: WalletMode) {
   try {
     const pmClient = getPMClient(walletMode);
@@ -97,16 +107,19 @@ async function getTradesData(userId: string, walletMode: WalletMode) {
 }
 
 export default async function TradesPage({ searchParams }: TradesPageProps) {
-  const { user = 'alice', mode: modeParam } = await searchParams;
+  const { user = 'alice', mode: modeParam, locale: localeParam } = await searchParams;
+  const locale = resolveLocale(localeParam);
+  const d = getDictionary(locale);
+  const intlLocale = getIntlLocale(locale);
   const walletMode = resolveWalletMode(modeParam);
   const data = await getTradesData(user, walletMode);
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <section className="demo-hero mb-6 overflow-hidden rounded-2xl border border-slate-800/60 p-6 text-white shadow-lg">
-        <p className="inline-flex rounded-full bg-sky-300/25 px-3 py-1 text-xs font-medium text-sky-100">Trading Terminal</p>
-        <h1 className="mt-3 text-2xl font-bold">交易中心</h1>
-        <p className="mt-1 text-sm text-slate-200">快速下單與交易紀錄查詢，展示 partner 端交易 API 介接流程。</p>
+        <p className="inline-flex rounded-full bg-sky-300/25 px-3 py-1 text-xs font-medium text-sky-100">{d.trades.badge}</p>
+        <h1 className="mt-3 text-2xl font-bold">{d.trades.title}</h1>
+        <p className="mt-1 text-sm text-slate-200">{d.trades.subtitle}</p>
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -115,11 +128,12 @@ export default async function TradesPage({ searchParams }: TradesPageProps) {
             userId={user}
             markets={data?.marketOptions ?? []}
             walletMode={walletMode}
+            locale={locale}
           />
         </section>
 
         <section className="table-surface lg:col-span-2 p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">我的交易紀錄</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-800">{d.trades.myRecords}</h2>
 
           {data?.trades?.length ? (
             <>
@@ -127,20 +141,20 @@ export default async function TradesPage({ searchParams }: TradesPageProps) {
                 {data.trades.map((trade, idx) => (
                   <article key={typeof trade.trade_id === 'string' ? trade.trade_id : `trade-mobile-${idx}`} className="mobile-data-card">
                     <p className="text-xs text-slate-500">
-                      {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString('zh-TW') : 'N/A'}
+                      {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString(intlLocale) : d.common.notAvailable}
                     </p>
                     <p className="mt-1 font-mono text-xs text-slate-700">{getMarketLabel(trade.market_id)}</p>
                     <p className="mt-1 text-sm font-medium uppercase text-slate-800">
-                      {typeof trade.type === 'string' ? trade.type : 'N/A'} / {typeof trade.outcome === 'string' ? trade.outcome : 'N/A'}
+                      {getTradeText(trade.type, d)} / {getTradeText(trade.outcome, d)}
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                      <p>股數：{typeof trade.shares === 'number' ? trade.shares : 0}</p>
-                      <p>單價：${typeof trade.price_per_share === 'number' ? trade.price_per_share.toFixed(2) : '0.00'}</p>
+                      <p>{d.common.shares}：{typeof trade.shares === 'number' ? trade.shares : 0}</p>
+                      <p>{d.trades.unitPrice}：${typeof trade.price_per_share === 'number' ? trade.price_per_share.toFixed(2) : '0.00'}</p>
                       <p className="font-semibold text-slate-900">
-                        總額：${typeof trade.total_amount === 'number' ? trade.total_amount.toFixed(2) : '0.00'}
+                        {d.trades.total}：${typeof trade.total_amount === 'number' ? trade.total_amount.toFixed(2) : '0.00'}
                       </p>
                       <p className="text-right font-semibold text-slate-900">
-                        餘額：${typeof trade.user_balance_after === 'number' ? trade.user_balance_after.toFixed(2) : '0.00'}
+                        {d.common.balance}：${typeof trade.user_balance_after === 'number' ? trade.user_balance_after.toFixed(2) : '0.00'}
                       </p>
                     </div>
                   </article>
@@ -151,24 +165,24 @@ export default async function TradesPage({ searchParams }: TradesPageProps) {
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="table-head-row text-left text-xs">
-                      <th className="py-2 pr-3">時間</th>
-                      <th className="py-2 pr-3">市場</th>
-                      <th className="py-2 pr-3">類型</th>
-                      <th className="py-2 pr-3">股數</th>
-                      <th className="py-2 pr-3">單價</th>
-                      <th className="py-2 pr-3">總額</th>
-                      <th className="py-2 pr-3">餘額</th>
+                      <th className="py-2 pr-3">{d.common.time}</th>
+                      <th className="py-2 pr-3">{d.common.market}</th>
+                      <th className="py-2 pr-3">{d.trades.type}</th>
+                      <th className="py-2 pr-3">{d.common.shares}</th>
+                      <th className="py-2 pr-3">{d.trades.unitPrice}</th>
+                      <th className="py-2 pr-3">{d.trades.total}</th>
+                      <th className="py-2 pr-3">{d.common.balance}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.trades.map((trade, idx) => (
                       <tr key={typeof trade.trade_id === 'string' ? trade.trade_id : `trade-${idx}`} className="table-body-row">
                         <td className="py-2 pr-3">
-                          {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString('zh-TW') : 'N/A'}
+                          {typeof trade.created_at === 'string' ? new Date(trade.created_at).toLocaleString(intlLocale) : d.common.notAvailable}
                         </td>
                         <td className="py-2 pr-3 font-mono text-xs">{getMarketLabel(trade.market_id)}</td>
                         <td className="py-2 pr-3 uppercase">
-                          {typeof trade.type === 'string' ? trade.type : 'N/A'} / {typeof trade.outcome === 'string' ? trade.outcome : 'N/A'}
+                          {getTradeText(trade.type, d)} / {getTradeText(trade.outcome, d)}
                         </td>
                         <td className="py-2 pr-3">{typeof trade.shares === 'number' ? trade.shares : 0}</td>
                         <td className="py-2 pr-3">${typeof trade.price_per_share === 'number' ? trade.price_per_share.toFixed(2) : '0.00'}</td>
@@ -181,7 +195,7 @@ export default async function TradesPage({ searchParams }: TradesPageProps) {
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-500">目前沒有交易紀錄。</p>
+            <p className="text-sm text-slate-500">{d.trades.noRecords}</p>
           )}
         </section>
       </div>

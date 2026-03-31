@@ -85,7 +85,7 @@ export function BrandingSettings({
       const json = (await res.json()) as { success?: boolean; data?: { logo_url: string }; error?: string; code?: string };
 
       if (!res.ok || !json.success) {
-        throw new Error(json.error ?? json.code ?? 'Upload failed');
+        throw new Error(json.error ?? json.code ?? d.branding.uploadFailedFallback);
       }
 
       setMessage({ type: 'success', text: d.branding.logoSuccess });
@@ -112,7 +112,7 @@ export function BrandingSettings({
       const json = (await res.json()) as { success?: boolean; error?: string; code?: string };
 
       if (!res.ok || !json.success) {
-        throw new Error(json.error ?? json.code ?? 'Save failed');
+        throw new Error(json.error ?? json.code ?? d.branding.saveFailedFallback);
       }
 
       setMessage({ type: 'success', text: d.branding.themeSaved });
@@ -142,7 +142,7 @@ export function BrandingSettings({
             {logoPreview && (
               <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoPreview} alt="Logo preview" className="h-full w-full object-contain" />
+                <img src={logoPreview} alt={d.branding.logoPreviewAlt} className="h-full w-full object-contain" />
               </div>
             )}
 
@@ -253,7 +253,7 @@ export function BrandingSettings({
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-semibold text-slate-900">{d.branding.livePreview}</h3>
             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
-              Live Preview
+              {d.branding.livePreviewBadge}
             </span>
           </div>
 

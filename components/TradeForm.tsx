@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getDictionary } from '@/lib/i18n';
 
 interface MarketOption {
   id: string;
@@ -13,10 +14,12 @@ interface TradeFormProps {
   markets: MarketOption[];
   onSuccess?: () => void;
   walletMode?: string;
+  locale?: string;
 }
 
-export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormProps) {
+export function TradeForm({ userId, markets, onSuccess, walletMode, locale }: TradeFormProps) {
   const router = useRouter();
+  const d = getDictionary(locale);
   const initialMarketId = markets[0]?.id ?? '';
   const [marketId, setMarketId] = useState(initialMarketId);
   const [type, setType] = useState<'buy' | 'sell'>('buy');
@@ -34,13 +37,13 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
 
     const parsedShares = Number(shares);
     if (!Number.isInteger(parsedShares) || parsedShares < 1) {
-      setError('股數需為大於等於 1 的整數');
+      setError(d.trades.sharesIntegerError);
       return;
     }
 
     const normalizedMarketId = marketId.trim();
     if (!normalizedMarketId) {
-      setError('請先選擇市場');
+      setError(d.trades.chooseMarketError);
       return;
     }
 
@@ -55,15 +58,15 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
 
       const json = (await res.json()) as { error?: string; code?: string };
       if (!res.ok) {
-        setError(json.error ?? '下單失敗');
+        setError(json.error ?? d.trades.submitFailed);
         return;
       }
 
-      setMessage('下單成功');
+      setMessage(d.trades.submitSuccess);
       onSuccess?.();
       router.refresh();
     } catch {
-      setError('下單失敗，請稍後再試');
+      setError(d.trades.submitRetry);
     } finally {
       setLoading(false);
     }
@@ -71,12 +74,12 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
 
   return (
     <div className="glass-card lift-hover rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-slate-900">快速下單</h2>
-      <p className="mt-1 text-xs text-slate-600">透過 `/api/trades` 代表用戶下單，展示交易執行路徑。</p>
+      <h2 className="text-base font-semibold text-slate-900">{d.trades.quickOrderTitle}</h2>
+      <p className="mt-1 text-xs text-slate-600">{d.trades.quickOrderDesc}</p>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="text-sm font-medium text-slate-700">
-          市場
+          {d.trades.market}
           <select
             value={marketId}
             onChange={(e) => setMarketId(e.target.value)}
@@ -84,7 +87,7 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
             disabled={markets.length === 0}
           >
             {markets.length === 0 ? (
-              <option value="">目前無可交易市場</option>
+              <option value="">{d.trades.noMarkets}</option>
             ) : (
               markets.map((m) => (
                 <option key={m.id} value={m.id}>{m.title}</option>
@@ -94,7 +97,7 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          股數
+          {d.common.shares}
           <input
             type="number"
             min="1"
@@ -106,26 +109,26 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          方向
+          {d.wallet.direction}
           <select
             value={type}
             onChange={(e) => setType(e.target.value as 'buy' | 'sell')}
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner"
           >
-            <option value="buy">買入</option>
-            <option value="sell">賣出</option>
+            <option value="buy">{d.trades.buy}</option>
+            <option value="sell">{d.trades.sell}</option>
           </select>
         </label>
 
         <label className="text-sm font-medium text-slate-700">
-          結果
+          {d.trades.outcome}
           <select
             value={outcome}
             onChange={(e) => setOutcome(e.target.value as 'yes' | 'no')}
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner"
           >
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
+            <option value="yes">{d.common.yes}</option>
+            <option value="no">{d.common.no}</option>
           </select>
         </label>
       </div>
@@ -135,12 +138,12 @@ export function TradeForm({ userId, markets, onSuccess, walletMode }: TradeFormP
         disabled={disabled}
         className="mt-4 w-full rounded-lg bg-gradient-to-r from-blue-700 to-indigo-700 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:from-blue-800 hover:to-indigo-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? '送出中...' : '送出交易'}
+        {loading ? d.trades.submitting : d.trades.submit}
       </button>
 
       {message && <p className="mt-3 text-sm text-emerald-700">{message}</p>}
       {error && <p className="mt-3 text-sm text-rose-700">{error}</p>}
-      {markets.length === 0 && <p className="mt-3 text-sm text-amber-700">目前沒有可選市場，請稍後重整或先確認市場已開放交易。</p>}
+      {markets.length === 0 && <p className="mt-3 text-sm text-amber-700">{d.trades.noMarkets}</p>}
     </div>
   );
 }
