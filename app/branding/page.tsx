@@ -1,6 +1,7 @@
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { BrandingSettings } from '@/components/BrandingSettings';
+import { getDictionary } from '@/lib/i18n';
 
 interface BrandingPageProps {
   searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
@@ -34,6 +35,7 @@ async function getEmbedData(userId: string, walletMode: WalletMode) {
 
 export default async function BrandingPage({ searchParams }: BrandingPageProps) {
   const { user = 'alice', mode: modeParam, locale } = await searchParams;
+  const d = getDictionary(locale);
   const walletMode = resolveWalletMode(modeParam);
   const embedData = await getEmbedData(user, walletMode);
 
@@ -43,9 +45,9 @@ export default async function BrandingPage({ searchParams }: BrandingPageProps) 
   return (
     <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">品牌設定</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{d.branding.title}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          自訂嵌入元件的品牌外觀，包含 Logo、主題色彩與排版設定
+          {d.branding.subtitle}
         </p>
       </div>
 
@@ -61,9 +63,9 @@ export default async function BrandingPage({ searchParams }: BrandingPageProps) 
         <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white text-center">
           <span className="text-3xl">🔌</span>
           <p className="text-sm text-gray-500">
-            無法連線至 PredictMarkets
+            {d.common.connectError}
             <br />
-            請確認服務正在執行
+            {d.common.confirmService}
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import type {
   PredictMarketTheme,
   TradeCompletedData,
 } from '@/types/sdk';
+import { getDictionary } from '@/lib/i18n';
 
 // ─── 型別 ─────────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ export function EmbedWidget({
   const tokenRef = useRef<string>(initialToken);
   const [status, setStatus] = useState<WidgetStatus>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const d = getDictionary(locale);
 
   // 優先使用 NEXT_PUBLIC_PM_EMBED_BASE_URL
   const resolvedEmbedBaseUrl =
@@ -129,7 +131,7 @@ export function EmbedWidget({
       setStatus('ready');
     } catch (err) {
       console.error('[EmbedWidget] Init error:', err);
-      setErrorMessage('載入市場元件時發生錯誤');
+      setErrorMessage('${d.embed.loadError}');
       setStatus('error');
     }
   }, [resolvedEmbedBaseUrl, route, height, compact, hideHeader, hideFooter, resolvedTheme, locale, onTradeComplete, userId, walletMode]);
@@ -155,7 +157,7 @@ export function EmbedWidget({
 
     const handleScriptError = () => {
       if (cancelled) return;
-      setErrorMessage('無法載入預測市場 SDK，請確認 predict-markets 服務正在執行');
+      setErrorMessage('${d.embed.sdkError}');
       setStatus('error');
     };
 
@@ -209,7 +211,7 @@ export function EmbedWidget({
           }}
           className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-200"
         >
-          重試
+          {d.common.retry}
         </button>
       </div>
     );

@@ -2,16 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-
-const NAV_ITEMS = [
-  { href: '/', label: '首頁' },
-  { href: '/wallet', label: '錢包' },
-  { href: '/trades', label: '交易' },
-  { href: '/portfolio', label: '我的投資組合' },
-  { href: '/deposit', label: '保證金' },
-  { href: '/reconciliation', label: '對帳報告' },
-  { href: '/branding', label: '品牌設定' },
-];
+import { getDictionary } from '@/lib/i18n';
 
 interface NavLinksProps {
   mobile?: boolean;
@@ -22,6 +13,18 @@ export function NavLinks({ mobile = false }: NavLinksProps) {
   const user = searchParams.get('user');
   const mode = searchParams.get('mode');
   const locale = searchParams.get('locale');
+
+  const d = getDictionary(locale);
+
+  const NAV_ITEMS = [
+    { href: '/', label: d.nav.home },
+    { href: '/wallet', label: d.nav.wallet },
+    { href: '/trades', label: d.nav.trades },
+    { href: '/portfolio', label: d.nav.portfolio },
+    { href: '/deposit', label: d.nav.deposit },
+    { href: '/reconciliation', label: d.nav.reconciliation },
+    { href: '/branding', label: d.nav.branding },
+  ];
 
   const navClassName = mobile
     ? 'flex items-center gap-1.5 overflow-x-auto px-1 py-1.5 text-sm font-medium text-slate-700 sm:hidden'

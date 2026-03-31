@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-
-const MODES = [
-  { value: 'transfer', label: 'Transfer', desc: 'PM 管理餘額' },
-  { value: 'seamless', label: 'Seamless', desc: '商戶管理餘額' },
-] as const;
+import { getDictionary } from '@/lib/i18n';
 
 export function ModeSwitcher() {
   const router = useRouter();
@@ -14,7 +10,14 @@ export function ModeSwitcher() {
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
 
+  const locale = searchParams.get('locale');
+  const d = getDictionary(locale);
   const currentMode = searchParams.get('mode') ?? 'transfer';
+
+  const MODES = [
+    { value: 'transfer', label: d.mode.transfer, desc: d.mode.transferDesc },
+    { value: 'seamless', label: d.mode.seamless, desc: d.mode.seamlessDesc },
+  ] as const;
 
   const switchMode = (mode: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -60,7 +63,7 @@ export function ModeSwitcher() {
           <div className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg">
             <div className="border-b border-gray-100 px-3 py-2">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                錢包模式
+                {d.mode.label}
               </p>
             </div>
             {MODES.map((mode) => (

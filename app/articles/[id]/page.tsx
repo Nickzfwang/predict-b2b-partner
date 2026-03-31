@@ -5,6 +5,7 @@ import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { getArticleById } from '@/data/articles';
 import { EmbedWidget } from '@/components/EmbedWidget';
+import { getDictionary } from '@/lib/i18n';
 
 interface ArticlePageProps {
   params: Promise<{ id: string }>;
@@ -32,6 +33,7 @@ async function getEmbedToken(userId: string, walletMode: WalletMode) {
 export default async function ArticlePage({ params, searchParams }: ArticlePageProps) {
   const { id } = await params;
   const { user = 'alice', mode: modeParam, locale } = await searchParams;
+  const d = getDictionary(locale);
   const walletMode = resolveWalletMode(modeParam);
 
   const article = getArticleById(id);
@@ -55,7 +57,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
             clipRule="evenodd"
           />
         </svg>
-        返回首頁
+        {d.article.backToHome}
       </Link>
 
       {/* 文章 Header */}
@@ -109,16 +111,16 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              📊 {article.relatedMarketId ? '相關預測市場' : '熱門預測市場'}
+              📊 {article.relatedMarketId ? d.article.relatedMarkets : d.article.popularMarkets}
             </h2>
             <p className="mt-0.5 text-sm text-gray-500">
               {article.relatedMarketId
-                ? '針對本文主題，押注你的預測'
-                : '瀏覽目前熱門的預測市場'}
+                ? d.article.relatedMarketsDesc
+                : d.article.popularMarketsDesc}
             </p>
           </div>
           <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-            🟢 即時定價
+            🟢 {d.article.livePricing}
           </span>
         </div>
 
@@ -136,15 +138,15 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
           <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white text-center">
             <span className="text-3xl">🔌</span>
             <p className="text-sm text-gray-500">
-              無法連線至 PredictMarkets
+              {d.common.connectError}
               <br />
-              請確認服務正在執行
+              {d.common.confirmService}
             </p>
           </div>
         )}
 
         <p className="mt-3 text-center text-xs text-gray-400">
-          市場定價由 LMSR 自動做市商（AMM）決定，即時反映市場共識
+          {d.article.pricingNote}
         </p>
       </section>
     </div>

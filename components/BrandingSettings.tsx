@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import type { PredictMarketTheme } from '@/types/sdk';
 import { EmbedWidget } from './EmbedWidget';
+import { getDictionary } from '@/lib/i18n';
 
 // ─── 型別 ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ export function BrandingSettings({
   locale,
   walletMode,
 }: BrandingSettingsProps) {
+  const d = getDictionary(locale);
   const [themeForm, setThemeForm] = useState<ThemeFormState>(DEFAULT_THEME);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -86,9 +88,9 @@ export function BrandingSettings({
         throw new Error(json.error ?? json.code ?? 'Upload failed');
       }
 
-      setMessage({ type: 'success', text: `Logo 已上傳成功` });
+      setMessage({ type: 'success', text: d.branding.logoSuccess });
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Logo 上傳失敗';
+      const errMsg = err instanceof Error ? err.message : d.branding.logoFailed;
       setMessage({ type: 'error', text: errMsg });
     } finally {
       setUploading(false);
@@ -113,9 +115,9 @@ export function BrandingSettings({
         throw new Error(json.error ?? json.code ?? 'Save failed');
       }
 
-      setMessage({ type: 'success', text: '主題設定已儲存' });
+      setMessage({ type: 'success', text: d.branding.themeSaved });
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : '主題儲存失敗';
+      const errMsg = err instanceof Error ? err.message : d.branding.themeFailed;
       setMessage({ type: 'error', text: errMsg });
     } finally {
       setSaving(false);
@@ -133,8 +135,8 @@ export function BrandingSettings({
       <div className="space-y-6">
         {/* Logo 上傳 */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-base font-semibold text-slate-900">Logo</h3>
-          <p className="mt-1 text-sm text-slate-500">上傳品牌 Logo，支援 PNG、JPG、SVG（最大 2MB）</p>
+          <h3 className="text-base font-semibold text-slate-900">{d.branding.logoTitle}</h3>
+          <p className="mt-1 text-sm text-slate-500">{d.branding.logoDesc}</p>
 
           <div className="mt-4 flex items-center gap-4">
             {logoPreview && (
@@ -157,7 +159,7 @@ export function BrandingSettings({
                 disabled={uploading}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                {uploading ? '上傳中...' : '選擇檔案'}
+                {uploading ? d.branding.uploading : d.branding.chooseFile}
               </button>
             </div>
           </div>
@@ -165,27 +167,27 @@ export function BrandingSettings({
 
         {/* Theme 設定 */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-base font-semibold text-slate-900">主題色彩</h3>
-          <p className="mt-1 text-sm text-slate-500">自訂嵌入元件的色彩與外觀，即時預覽效果</p>
+          <h3 className="text-base font-semibold text-slate-900">{d.branding.themeTitle}</h3>
+          <p className="mt-1 text-sm text-slate-500">{d.branding.themeDesc}</p>
 
           <div className="mt-4 grid grid-cols-2 gap-4">
             <ColorField
-              label="主色"
+              label={d.branding.primaryColor}
               value={themeForm.primary_color}
               onChange={(v) => updateField('primary_color', v)}
             />
             <ColorField
-              label="輔助色"
+              label={d.branding.secondaryColor}
               value={themeForm.secondary_color}
               onChange={(v) => updateField('secondary_color', v)}
             />
             <ColorField
-              label="背景色"
+              label={d.branding.backgroundColor}
               value={themeForm.background_color}
               onChange={(v) => updateField('background_color', v)}
             />
             <ColorField
-              label="文字色"
+              label={d.branding.textColor}
               value={themeForm.text_color}
               onChange={(v) => updateField('text_color', v)}
             />
@@ -193,7 +195,7 @@ export function BrandingSettings({
 
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700">圓角</label>
+              <label className="block text-sm font-medium text-slate-700">{d.branding.borderRadius}</label>
               <input
                 type="text"
                 value={themeForm.border_radius}
@@ -203,7 +205,7 @@ export function BrandingSettings({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">字型</label>
+              <label className="block text-sm font-medium text-slate-700">{d.branding.fontFamily}</label>
               <input
                 type="text"
                 value={themeForm.font_family}
@@ -220,13 +222,13 @@ export function BrandingSettings({
               disabled={saving}
               className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
             >
-              {saving ? '儲存中...' : '儲存主題設定'}
+              {saving ? d.common.saving : d.branding.saveTheme}
             </button>
             <button
               onClick={() => setThemeForm(DEFAULT_THEME)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
-              重設
+              {d.common.reset}
             </button>
           </div>
         </div>
@@ -249,7 +251,7 @@ export function BrandingSettings({
       <div className="space-y-4">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">即時預覽</h3>
+            <h3 className="text-base font-semibold text-slate-900">{d.branding.livePreview}</h3>
             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
               Live Preview
             </span>
