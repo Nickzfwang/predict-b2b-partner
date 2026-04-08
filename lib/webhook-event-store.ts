@@ -38,11 +38,23 @@ interface StoredPositionSettledEvent {
   payout: number;
 }
 
+interface StoredMarketVoidedEvent {
+  event_id: string;
+  created_at: string;
+  market_id: string;
+  market_title?: string;
+  void_reason: string;
+  voided_at: string;
+  refunded_positions_count: number;
+  total_refunded_amount: string;
+}
+
 interface WebhookState {
   processed_event_ids: string[];
   trade_created: StoredTradeCreatedEvent[];
   user_balance_changed: StoredUserBalanceChangedEvent[];
   position_settled: StoredPositionSettledEvent[];
+  market_voided: StoredMarketVoidedEvent[];
   updated_at: string;
 }
 
@@ -59,6 +71,7 @@ function defaultState(): WebhookState {
     trade_created: [],
     user_balance_changed: [],
     position_settled: [],
+    market_voided: [],
     updated_at: new Date().toISOString(),
   };
 }
@@ -80,6 +93,9 @@ async function readState(): Promise<WebhookState> {
         : [],
       position_settled: Array.isArray(parsed.position_settled)
         ? (parsed.position_settled as StoredPositionSettledEvent[])
+        : [],
+      market_voided: Array.isArray(parsed.market_voided)
+        ? (parsed.market_voided as StoredMarketVoidedEvent[])
         : [],
       updated_at: typeof parsed.updated_at === 'string' ? parsed.updated_at : new Date().toISOString(),
     };
@@ -193,6 +209,20 @@ export async function persistWebhookEvent(payload: {
         external_user_id: String(payload.data.external_user_id ?? ''),
         market_id: String(payload.data.market_id ?? ''),
         payout: Number(payload.data.payout ?? 0),
+      }, MAX_EVENT_ROWS);
+      break;
+    }
+
+    case 'market.voided': {
+      nextState.market_voided = pushWithCap(nextState.market_voided, {
+        event_id: payload.id,
+        created_at: eventCreatedAt,
+        market_id: String(payload.data.market_id ?? ''),
+        market_title: typeof payload.data.market_title === 'string' ? payload.data.market_title : undefined,
+        void_reason: String(payload.data.void_reason ?? ''),
+        voided_at: String(payload.data.voided_at ?? ''),
+        refunded_positions_count: Number(payload.data.refunded_positions_count ?? 0),
+        total_refunded_amount: String(payload.data.total_refunded_amount ?? '0.00'),
       }, MAX_EVENT_ROWS);
       break;
     }

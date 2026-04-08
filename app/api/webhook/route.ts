@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookDeliverySignature } from '@/lib/predict-markets';
 import { isWebhookEventProcessed, persistWebhookEvent } from '@/lib/webhook-event-store';
 
-type SupportedWebhookEvent = 'trade.created' | 'user.balance_changed' | 'position.settled';
+type SupportedWebhookEvent = 'trade.created' | 'user.balance_changed' | 'position.settled' | 'market.voided';
 
 interface IncomingWebhookPayload {
   id: string;
@@ -15,6 +15,7 @@ const SUPPORTED_EVENTS = new Set<SupportedWebhookEvent>([
   'trade.created',
   'user.balance_changed',
   'position.settled',
+  'market.voided',
 ]);
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

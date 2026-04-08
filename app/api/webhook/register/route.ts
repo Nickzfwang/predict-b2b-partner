@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPMClientFromParam } from '@/lib/get-pm-client';
 import { toApiErrorResponse } from '@/app/api/_utils/pm-error';
 
-const DEFAULT_EVENTS = ['trade.created', 'user.balance_changed', 'position.settled'];
+const DEFAULT_EVENTS = ['trade.created', 'user.balance_changed', 'position.settled', 'market.voided'];
 
 function toStringArray(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null;
@@ -50,19 +50,41 @@ export async function POST(request: NextRequest) {
 
     if (!forceCreate) {
       const existingRes = await pmClient.getWebhooks();
-      const existing = existingRes.data.find((item) => {
-        const sameUrl = item.url.replace(/\/$/, '') === callbackUrl.replace(/\/$/, '');
-        const itemEvents = normalizeEvents(item.events ?? []);
-        const sameEvents = JSON.stringify(itemEvents) === JSON.stringify(events);
-        return sameUrl && sameEvents;
+      const sameUrlWebhook = existingRes.data.find((item) => {
+        return item.url.replace(/\/$/, '') === callbackUrl.replace(/\/$/, '');
       });
 
-      if (existing) {
+      if (sameUrlWebhook) {
+        const existingEvents = normalizeEvents(sameUrlWebhook.events ?? []);
+        const sameEvents = JSON.stringify(existingEvents) === JSON.stringify(events);
+        const isActive = sameUrlWebhook.status === 'active';
+
+        if (sameEvents && isActive) {
+          return NextResponse.json({
+            success: true,
+            already_exists: true,
+            data: sameUrlWebhook,
+            note: 'Webhook already registered with same url/events.',
+          });
+        }
+
+        // Events differ or webhook is disabled → update subscription
+        const updatePayload: { events?: string[]; status?: 'active' | 'disabled' } = {};
+        if (!sameEvents) updatePayload.events = events;
+        if (!isActive) updatePayload.status = 'active';
+
+        const updatedRes = await pmClient.updateWebhook(sameUrlWebhook.id, updatePayload);
         return NextResponse.json({
           success: true,
           already_exists: true,
-          data: existing,
-          note: 'Webhook already registered with same url/events.',
+          updated: true,
+          reactivated: !isActive,
+          data: updatedRes.data,
+          previous_events: existingEvents,
+          current_events: events,
+          note: !isActive
+            ? 'Webhook updated and reactivated (was disabled due to consecutive failures).'
+            : 'Webhook events updated to include new event types.',
         });
       }
     }

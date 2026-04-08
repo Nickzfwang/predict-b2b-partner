@@ -17,6 +17,7 @@ export async function GET() {
       trade_created: [],
       user_balance_changed: [],
       position_settled: [],
+      market_voided: [],
       updated_at: null,
     });
   }

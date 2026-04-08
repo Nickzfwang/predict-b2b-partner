@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 
 interface NotificationItem {
   id: string;
-  event: 'trade.created' | 'user.balance_changed' | 'position.settled';
+  event: 'trade.created' | 'user.balance_changed' | 'position.settled' | 'market.voided';
   createdAt: string;
   externalUserId?: string;
   title: string;
@@ -23,6 +23,7 @@ interface WebhookEventsResponse {
   trade_created?: Array<Record<string, unknown>>;
   user_balance_changed?: Array<Record<string, unknown>>;
   position_settled?: Array<Record<string, unknown>>;
+  market_voided?: Array<Record<string, unknown>>;
 }
 
 const STORAGE_KEY = 'webhook_last_seen_at';
@@ -70,7 +71,18 @@ function normalizeItems(json: WebhookEventsResponse): NotificationItem[] {
       }))
     : [];
 
-  return [...tradeItems, ...balanceItems, ...settledItems]
+  const voidedItems = Array.isArray(json.market_voided)
+    ? json.market_voided.map((e, idx) => ({
+        id: toStr(e.event_id, `voided-${idx}`),
+        event: 'market.voided' as const,
+        createdAt: toStr(e.created_at),
+        externalUserId: undefined,
+        title: '市場作廢',
+        detail: `"${toStr(e.market_title, '未知市場')}" · 退款 ${toNum(e.refunded_positions_count)} 筆 · 共 $${toStr(e.total_refunded_amount, '0.00')}`,
+      }))
+    : [];
+
+  return [...tradeItems, ...balanceItems, ...settledItems, ...voidedItems]
     .filter((item) => item.createdAt)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
