@@ -135,6 +135,13 @@ export interface Dictionary {
     recentTradesApi: string;
     goToTrading: string;
     noTrades: string;
+    statusOpen: string;
+    statusClosed: string;
+    statusJudging: string;
+    statusResolved: string;
+    statusVoided: string;
+    refunded: string;
+    refundedAmount: string;
   };
   branding: {
     title: string;

@@ -135,6 +135,13 @@ const ko: Dictionary = {
     recentTradesApi: '최근 거래 (API)',
     goToTrading: '거래 센터로',
     noTrades: '거래 데이터가 없습니다.',
+    statusOpen: '진행 중',
+    statusClosed: '마감',
+    statusJudging: '판정 중',
+    statusResolved: '확정',
+    statusVoided: '무효',
+    refunded: '환불됨',
+    refundedAmount: '환불 +${amount}',
   },
   branding: {
     title: '브랜드 설정',

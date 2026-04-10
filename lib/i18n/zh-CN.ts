@@ -135,6 +135,13 @@ const zhCN: Dictionary = {
     recentTradesApi: '最近交易（API）',
     goToTrading: '前往交易中心',
     noTrades: '目前没有交易数据。',
+    statusOpen: '进行中',
+    statusClosed: '已截止',
+    statusJudging: '判定中',
+    statusResolved: '已结算',
+    statusVoided: '已作废',
+    refunded: '已退款',
+    refundedAmount: '退款 +${amount}',
   },
   branding: {
     title: '品牌设置',

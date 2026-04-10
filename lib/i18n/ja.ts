@@ -135,6 +135,13 @@ const ja: Dictionary = {
     recentTradesApi: '最近の取引（API）',
     goToTrading: '取引センターへ',
     noTrades: '取引データがありません。',
+    statusOpen: '進行中',
+    statusClosed: '締切済み',
+    statusJudging: '判定中',
+    statusResolved: '確定済み',
+    statusVoided: '無効',
+    refunded: '返金済み',
+    refundedAmount: '返金 +${amount}',
   },
   branding: {
     title: 'ブランド設定',

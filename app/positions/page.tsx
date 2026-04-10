@@ -1,6 +1,24 @@
 import { getPMClient } from '@/lib/get-pm-client';
 import { resolveWalletMode, getUserPrefix, type WalletMode } from '@/lib/wallet-mode';
 import { getDictionary, getIntlLocale, resolveLocale } from '@/lib/i18n';
+import type { Dictionary } from '@/lib/i18n';
+
+interface StatusBadgeInfo {
+  label: string;
+  bg: string;
+  text: string;
+}
+
+function getStatusBadge(status: string, d: Dictionary): StatusBadgeInfo {
+  const map: Record<string, StatusBadgeInfo> = {
+    open: { label: d.portfolio.statusOpen, bg: 'bg-emerald-100', text: 'text-emerald-700' },
+    closed: { label: d.portfolio.statusClosed, bg: 'bg-amber-100', text: 'text-amber-700' },
+    judging: { label: d.portfolio.statusJudging, bg: 'bg-blue-100', text: 'text-blue-700' },
+    resolved: { label: d.portfolio.statusResolved, bg: 'bg-slate-100', text: 'text-slate-600' },
+    voided: { label: d.portfolio.statusVoided, bg: 'bg-gray-200', text: 'text-gray-600' },
+  };
+  return map[status] ?? { label: status, bg: 'bg-slate-100', text: 'text-slate-600' };
+}
 
 interface PositionsPageProps {
   searchParams: Promise<{ user?: string; mode?: string; locale?: string }>;
@@ -157,8 +175,12 @@ export default async function PositionsPage({ searchParams }: PositionsPageProps
   const totals = positions.reduce(
     (acc, p) => {
       acc.invested += p.invested;
-      acc.currentValue += p.currentValue;
-      acc.unrealized += p.unrealized;
+      if (p.marketStatus === 'voided') {
+        acc.currentValue += p.invested;
+      } else {
+        acc.currentValue += p.currentValue;
+        acc.unrealized += p.unrealized;
+      }
       return acc;
     },
     { invested: 0, currentValue: 0, unrealized: 0 },
@@ -194,19 +216,40 @@ export default async function PositionsPage({ searchParams }: PositionsPageProps
                 </tr>
               </thead>
               <tbody>
-                {positions.map((p) => (
-                  <tr key={p.id} className="border-b border-slate-50 text-slate-700 last:border-b-0">
-                    <td className="py-2 pr-3">{p.marketTitle}</td>
-                    <td className="py-2 pr-3 capitalize">{p.marketStatus}</td>
-                    <td className="py-2 pr-3">{p.yesShares}</td>
-                    <td className="py-2 pr-3">{p.noShares}</td>
-                    <td className="py-2 pr-3">${p.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="py-2 pr-3">${p.currentValue.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className={`py-2 pr-3 ${p.unrealized >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      ${p.unrealized.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
+                {positions.map((p) => {
+                  const isVoided = p.marketStatus === 'voided';
+                  return (
+                    <tr key={p.id} className={`border-b border-slate-50 text-slate-700 last:border-b-0 ${isVoided ? 'opacity-80' : ''}`}>
+                      <td className="py-2 pr-3">{p.marketTitle}</td>
+                      <td className="py-2 pr-3">
+                        {(() => { const badge = getStatusBadge(p.marketStatus, d); return (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.bg} ${badge.text}`}>{badge.label}</span>
+                        ); })()}
+                      </td>
+                      <td className="py-2 pr-3">{p.yesShares}</td>
+                      <td className="py-2 pr-3">{p.noShares}</td>
+                      <td className="py-2 pr-3">${p.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="py-2 pr-3">
+                        {isVoided ? (
+                          <span className="text-slate-400">—</span>
+                        ) : (
+                          `$${p.currentValue.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        )}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {isVoided ? (
+                          <span className="font-semibold text-emerald-600">
+                            {d.portfolio.refunded} +${p.invested.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className={p.unrealized >= 0 ? 'text-emerald-700' : 'text-rose-700'}>
+                            ${p.unrealized.toLocaleString(intlLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

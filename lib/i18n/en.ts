@@ -135,6 +135,13 @@ const en: Dictionary = {
     recentTradesApi: 'Recent Trades (API)',
     goToTrading: 'Go to Trading',
     noTrades: 'No trade data available.',
+    statusOpen: 'Open',
+    statusClosed: 'Closed',
+    statusJudging: 'Judging',
+    statusResolved: 'Resolved',
+    statusVoided: 'Voided',
+    refunded: 'Refunded',
+    refundedAmount: 'Refund +${amount}',
   },
   branding: {
     title: 'Branding Settings',

@@ -135,6 +135,13 @@ const zhTW: Dictionary = {
     recentTradesApi: '最近交易（API）',
     goToTrading: '前往交易中心',
     noTrades: '目前沒有交易資料。',
+    statusOpen: '進行中',
+    statusClosed: '已截止',
+    statusJudging: '判定中',
+    statusResolved: '已結算',
+    statusVoided: '已作廢',
+    refunded: '已退款',
+    refundedAmount: '退款 +${amount}',
   },
   branding: {
     title: '品牌設定',
